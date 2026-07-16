@@ -30,7 +30,7 @@ interface DisbursementHistoryItem {
   status: "Completed";
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const getAuthToken = () => localStorage.getItem("token") || "";
 
@@ -410,7 +410,7 @@ const AppContent = () => {
     if (!disbursementId) return;
     try {
       await fetchApi(`/disbursements/${disbursementId}/approve`, {
-        method: "POST",
+        method: "PATCH",
       });
       setRecipients(recipients.map((r) => ({ ...r, status: "Verified" })));
       showNotification("success", "Disbursement batch approved successfully!");
@@ -433,8 +433,8 @@ const AppContent = () => {
     setProgressLogs([]);
 
     try {
-      await fetchApi(`/disbursements/${disbursementId}/execute`, {
-        method: "POST",
+      await fetchApi(`/disbursements/${disbursementId}/submit`, {
+        method: "PATCH",
       });
       showNotification("success", "Disbursement execution initiated on Stellar.");
 

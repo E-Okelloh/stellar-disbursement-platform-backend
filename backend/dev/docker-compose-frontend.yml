@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  sdp-frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    volumes:
+      - ./env-config-${NETWORK_TYPE:-testnet}.js:/usr/share/nginx/html/settings/env-config.js
