@@ -39,16 +39,17 @@ type DisbursementWithUserMetadata struct {
 }
 
 var (
-	ErrDisbursementNotFound             = errors.New("disbursement not found")
-	ErrDisbursementNotReadyToStart      = errors.New("disbursement is not ready to be started")
-	ErrDisbursementNotReadyToPause      = errors.New("disbursement is not ready to be paused")
-	ErrDisbursementNotReadyToApprove    = errors.New("disbursement is not ready to be approved")
-	ErrDisbursementNotReadyToSubmit     = errors.New("disbursement is not ready to be submitted")
-	ErrDisbursementWalletDisabled       = errors.New("disbursement wallet is disabled")
+	ErrDisbursementNotFound          = errors.New("disbursement not found")
+	ErrDisbursementNotReadyToStart   = errors.New("disbursement is not ready to be started")
+	ErrDisbursementNotReadyToPause   = errors.New("disbursement is not ready to be paused")
+	ErrDisbursementNotReadyToApprove = errors.New("disbursement is not ready to be approved")
+	ErrDisbursementNotReadyToSubmit  = errors.New("disbursement is not ready to be submitted")
+	ErrDisbursementWalletDisabled    = errors.New("disbursement wallet is disabled")
 
-	ErrDisbursementStatusCantBeChanged = errors.New("disbursement status can't be changed to the requested status")
-	ErrDisbursementStartedByCreator    = errors.New("disbursement can't be started by its creator")
-	ErrDisbursementApprovedByCreator   = errors.New("disbursement can't be approved by its creator")
+	ErrDisbursementStatusCantBeChanged  = errors.New("disbursement status can't be changed to the requested status")
+	ErrDisbursementStartedByCreator     = errors.New("disbursement can't be started by its creator")
+	ErrDisbursementApprovedByCreator    = errors.New("disbursement can't be approved by its creator")
+	ErrDisbursementRequiresApprovalStep = errors.New("disbursement must be approved before it can be started; use the approve and submit endpoints")
 )
 
 type InsufficientBalanceError struct {
@@ -226,6 +227,13 @@ func (s *DisbursementManagementService) StartDisbursement(ctx context.Context, d
 		}
 
 		if organization.IsApprovalRequired {
+			// When approval is required, disbursements must go through the APPROVED
+			// state via ApproveDisbursement/SubmitDisbursement - this endpoint can no
+			// longer jump straight from READY to STARTED.
+			if disbursement.Status != data.ApprovedDisbursementStatus {
+				return ErrDisbursementRequiresApprovalStep
+			}
+
 			// check that the user starting the disbursement isn't the same as the one who created it
 			for _, sh := range disbursement.StatusHistory {
 				if sh.UserID == user.ID && (sh.Status == data.DraftDisbursementStatus || sh.Status == data.ReadyDisbursementStatus) {
@@ -441,7 +449,12 @@ func (s *DisbursementManagementService) SubmitDisbursement(ctx context.Context, 
 			return ErrDisbursementWalletDisabled
 		}
 
-		// 2. Verify Transition is Possible (APPROVED -> STARTED)
+		// 2. Verify the disbursement has actually gone through the approval step. READY -> STARTED
+		// is also a generically valid state machine transition (used by the legacy direct-start
+		// path), so it isn't sufficient on its own to guarantee this disbursement was approved.
+		if disbursement.Status != data.ApprovedDisbursementStatus {
+			return ErrDisbursementNotReadyToSubmit
+		}
 		err = disbursement.Status.TransitionTo(data.StartedDisbursementStatus)
 		if err != nil {
 			return ErrDisbursementNotReadyToSubmit

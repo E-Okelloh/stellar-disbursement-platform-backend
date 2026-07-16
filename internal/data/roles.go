@@ -5,15 +5,15 @@ import "fmt"
 type UserRole string
 
 func (u UserRole) String() string {
-    return string(u)
+	return string(u)
 }
 
 func (u UserRole) IsValid() bool {
-    switch u {
-    case OwnerUserRole, FinancialControllerUserRole, DeveloperUserRole, BusinessUserRole, InitiatorUserRole, ApproverUserRole, UploaderUserRole, FinanceOfficerUserRole:
-        return true
-    }
-    return false
+	switch u {
+	case OwnerUserRole, FinancialControllerUserRole, DeveloperUserRole, BusinessUserRole, InitiatorUserRole, ApproverUserRole, UploaderUserRole, FinanceOfficerUserRole:
+		return true
+	}
+	return false
 }
 
 // Roles description reference: https://stellarfoundation.slack.com/archives/C04C9MLM9UZ/p1681238994830149
@@ -36,19 +36,21 @@ const (
 	FinanceOfficerUserRole UserRole = "finance_officer"
 )
 
+// GetAllRoles returns all roles available.
 func GetAllRoles() []UserRole {
-    return []UserRole{
-        OwnerUserRole,
-        FinancialControllerUserRole,
-        DeveloperUserRole,
-        BusinessUserRole,
-        InitiatorUserRole,
-        ApproverUserRole,
-        UploaderUserRole,
-        FinanceOfficerUserRole,
-    }
+	return []UserRole{
+		OwnerUserRole,
+		FinancialControllerUserRole,
+		DeveloperUserRole,
+		BusinessUserRole,
+		InitiatorUserRole,
+		ApproverUserRole,
+		UploaderUserRole,
+		FinanceOfficerUserRole,
+	}
 }
 
+// GetBusinessOperationRoles returns roles related to business operations.
 func GetBusinessOperationRoles() []UserRole {
 	return []UserRole{
 		OwnerUserRole,
@@ -57,33 +59,37 @@ func GetBusinessOperationRoles() []UserRole {
 		InitiatorUserRole,
 		ApproverUserRole,
 		UploaderUserRole,
+		FinanceOfficerUserRole,
 	}
 }
 
+// FromUserRoleArrayToStringArray converts an array of UserRole type to an array of string.
 func FromUserRoleArrayToStringArray(roles []UserRole) []string {
-    rolesString := make([]string, 0, len(roles))
-    for _, role := range roles {
-        rolesString = append(rolesString, role.String())
-    }
-    return rolesString
+	rolesString := make([]string, 0, len(roles))
+	for _, role := range roles {
+		rolesString = append(rolesString, role.String())
+	}
+	return rolesString
 }
 
+// ValidateRoleMutualExclusivity checks if the provided roles contain mutually exclusive combinations.
+// Currently, InitiatorUserRole and ApproverUserRole are mutually exclusive.
 func ValidateRoleMutualExclusivity(roles []UserRole) error {
-    hasInitiator := false
-    hasApprover := false
+	hasInitiator := false
+	hasApprover := false
 
-    for _, role := range roles {
-        if role == InitiatorUserRole {
-            hasInitiator = true
-        }
-        if role == ApproverUserRole {
-            hasApprover = true
-        }
-    }
+	for _, role := range roles {
+		if role == InitiatorUserRole {
+			hasInitiator = true
+		}
+		if role == ApproverUserRole {
+			hasApprover = true
+		}
+	}
 
-    if hasInitiator && hasApprover {
-        return fmt.Errorf("initiator and approver roles are mutually exclusive")
-    }
+	if hasInitiator && hasApprover {
+		return fmt.Errorf("initiator and approver roles are mutually exclusive")
+	}
 
-    return nil
+	return nil
 }

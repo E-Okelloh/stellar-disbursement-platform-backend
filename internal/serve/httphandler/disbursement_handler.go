@@ -570,6 +570,8 @@ func (d DisbursementHandler) PatchDisbursementStatus(w http.ResponseWriter, r *h
 			httperror.BadRequest(services.ErrDisbursementStatusCantBeChanged.Error(), err, nil).Render(w)
 		case errors.Is(err, services.ErrDisbursementStartedByCreator):
 			httperror.Forbidden("Disbursement can't be started by its creator. Approval by another user is required.", err, nil).Render(w)
+		case errors.Is(err, services.ErrDisbursementRequiresApprovalStep):
+			httperror.BadRequest(services.ErrDisbursementRequiresApprovalStep.Error(), err, nil).Render(w)
 		case errors.Is(err, services.ErrDisbursementWalletDisabled):
 			httperror.BadRequest(services.ErrDisbursementWalletDisabled.Error(), err, nil).Render(w)
 		case errors.As(err, &insufficientBalanceErr):

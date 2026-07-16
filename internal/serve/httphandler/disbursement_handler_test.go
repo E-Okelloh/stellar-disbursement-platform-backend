@@ -1934,10 +1934,16 @@ func Test_DisbursementHandler_PatchDisbursementStatus(t *testing.T) {
 		data.EnableDisbursementApproval(t, ctx, handler.Models.Organizations)
 		defer data.DisableDisbursementApproval(t, ctx, handler.Models.Organizations)
 
+		// When approval is required, direct-start now requires the disbursement to have
+		// already gone through the APPROVED state.
+		approvedStatusHistory := append(readyStatusHistory, data.DisbursementStatusHistoryEntry{
+			Status: data.ApprovedDisbursementStatus,
+			UserID: "some-approver-id",
+		})
 		readyDisbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, handler.Models.Disbursements, &data.Disbursement{
 			Name:          "ready disbursement #1",
-			Status:        data.ReadyDisbursementStatus,
-			StatusHistory: readyStatusHistory,
+			Status:        data.ApprovedDisbursementStatus,
+			StatusHistory: approvedStatusHistory,
 		})
 
 		authManagerMock.
@@ -1967,10 +1973,16 @@ func Test_DisbursementHandler_PatchDisbursementStatus(t *testing.T) {
 		data.EnableDisbursementApproval(t, ctx, handler.Models.Organizations)
 		defer data.DisableDisbursementApproval(t, ctx, handler.Models.Organizations)
 
+		// When approval is required, direct-start now requires the disbursement to have
+		// already gone through the APPROVED state.
+		approvedStatusHistory := append(readyStatusHistory, data.DisbursementStatusHistoryEntry{
+			Status: data.ApprovedDisbursementStatus,
+			UserID: "some-approver-id",
+		})
 		readyDisbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, handler.Models.Disbursements, &data.Disbursement{
 			Name:          "ready disbursement #2",
-			Status:        data.ReadyDisbursementStatus,
-			StatusHistory: readyStatusHistory,
+			Status:        data.ApprovedDisbursementStatus,
+			StatusHistory: approvedStatusHistory,
 		})
 		wallet := data.CreateDefaultWalletFixture(t, ctx, dbConnectionPool)
 		receiver := data.CreateReceiverFixture(t, ctx, dbConnectionPool, &data.Receiver{})
