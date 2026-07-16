@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
@@ -7,39 +7,12 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 import svgr from "vite-plugin-svgr";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
-// Serves frontend/landing/ at "/" during `npm run start`, mirroring how nginx serves it
-// in production (landing at "/", dashboard app at "/app/"). Without this, the dev server
-// only ever shows the dashboard — the landing page silently never appears locally.
-function landingPagePlugin(): Plugin {
-  const landingDir = resolve(__dirname, "landing");
-  return {
-    name: "serve-landing-page",
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        if (!req.url) return next();
-        const [urlPath] = req.url.split("?");
-        if (urlPath.startsWith("/app") || urlPath.startsWith("/@") || urlPath.startsWith("/src")) {
-          return next();
-        }
-        const filePath = urlPath === "/" ? "index.html" : urlPath.slice(1);
-        const resolved = resolve(landingDir, filePath);
-        if (!resolved.startsWith(landingDir) || !existsSync(resolved) || !resolved.match(/\.\w+$/)) {
-          return next();
-        }
-        if (resolved.endsWith(".html")) res.setHeader("Content-Type", "text/html");
-        else if (resolved.endsWith(".svg")) res.setHeader("Content-Type", "image/svg+xml");
-        res.end(readFileSync(resolved));
-      });
-    },
-  };
-}
-
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), "REACT_APP_");
-  // Always served under /app/ — nginx serves the landing page at "/" in production,
-  // and the dev server mirrors that via landingPagePlugin() below.
-  const base = "/app/";
+  // Served under /app/ in production (nginx serves the landing page at "/"),
+  // but the dev server itself still runs at the root for local development.
+  const base = command === "build" ? "/app/" : "/";
 
   // Optional HTTPS support using mkcert certificates
   const useHttps = process.env.VITE_USE_HTTPS === "true";
@@ -56,7 +29,6 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     plugins: [
-      landingPagePlugin(),
       tailwindcss(),
       react(),
       nodePolyfills({
