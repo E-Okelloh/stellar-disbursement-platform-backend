@@ -440,7 +440,7 @@ func Test_CreateUserRequest_validate(t *testing.T) {
 			},
 			expectError: true,
 			errorExtras: map[string]interface{}{
-				"roles": "unexpected value for roles[0]=invalid_role. Expect one of these values: [owner financial_controller developer business initiator approver uploader finance_officer]",
+				"roles": "unexpected value for roles[0]=invalid_role. Expect one of these values: [owner financial_controller developer business initiator approver]",
 			},
 		},
 		{
@@ -618,7 +618,7 @@ func Test_UserHandler_CreateUser(t *testing.T) {
 			{
 				"error": "Request invalid",
 				"extras": {
-					"roles": "unexpected value for roles[0]=role1. Expect one of these values: [owner financial_controller developer business initiator approver uploader finance_officer]"
+					"roles": "unexpected value for roles[0]=role1. Expect one of these values: [owner financial_controller developer business initiator approver]"
 				}
 			}
 		`
@@ -1233,7 +1233,7 @@ func Test_UserHandler_UpdateUserRoles(t *testing.T) {
 			{
 				"error": "Request invalid",
 				"extras": {
-					"roles": "unexpected value for roles[0]=role1. Expect one of these values: [owner financial_controller developer business initiator approver uploader finance_officer]"
+					"roles": "unexpected value for roles[0]=role1. Expect one of these values: [owner financial_controller developer business initiator approver]"
 				}
 			}
 		`

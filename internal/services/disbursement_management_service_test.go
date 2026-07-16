@@ -333,24 +333,15 @@ func Test_DisbursementManagementService_StartDisbursement_success(t *testing.T) 
 			}
 
 			// Create fixtures: disbursements
-			// When approval is required, StartDisbursement now requires the disbursement to
-			// have already gone through the APPROVED state (see ApproveDisbursement) - direct
-			// READY -> STARTED is only allowed when approval is not required.
-			startableStatus := data.ReadyDisbursementStatus
-			statusHistory := []data.DisbursementStatusHistoryEntry{
-				{UserID: ownerUser.ID, Status: data.DraftDisbursementStatus},
-				{UserID: ownerUser.ID, Status: data.ReadyDisbursementStatus},
-			}
-			if tc.approvalFlowEnabled {
-				startableStatus = data.ApprovedDisbursementStatus
-				statusHistory = append(statusHistory, data.DisbursementStatusHistoryEntry{UserID: ownerUser.ID, Status: data.ApprovedDisbursementStatus})
-			}
 			readyDisbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-				Name:          "ready disbursement",
-				Status:        startableStatus,
-				Asset:         asset,
-				Wallet:        wallet,
-				StatusHistory: statusHistory,
+				Name:   "ready disbursement",
+				Status: data.ReadyDisbursementStatus,
+				Asset:  asset,
+				Wallet: wallet,
+				StatusHistory: []data.DisbursementStatusHistoryEntry{
+					{UserID: ownerUser.ID, Status: data.DraftDisbursementStatus},
+					{UserID: ownerUser.ID, Status: data.ReadyDisbursementStatus},
+				},
 			})
 
 			// Create fixtures: receivers & receiver wallets
@@ -419,9 +410,8 @@ func Test_DisbursementManagementService_StartDisbursement_success(t *testing.T) 
 			updatedDisbursement, err := models.Disbursements.Get(ctx, dbConnectionPool, readyDisbursement.ID)
 			require.NoError(t, err)
 			assert.Equal(t, data.StartedDisbursementStatus, updatedDisbursement.Status)
-			lastHistoryEntry := updatedDisbursement.StatusHistory[len(updatedDisbursement.StatusHistory)-1]
-			assert.Equal(t, user.ID, lastHistoryEntry.UserID)
-			assert.Equal(t, data.StartedDisbursementStatus, lastHistoryEntry.Status)
+			assert.Equal(t, user.ID, updatedDisbursement.StatusHistory[2].UserID)
+			assert.Equal(t, data.StartedDisbursementStatus, updatedDisbursement.StatusHistory[2].Status)
 
 			// 👀 Assert status: ReceiverWallets
 			receiverWallets, err := models.ReceiverWallet.GetByReceiverIDsAndWalletID(ctx, models.DBConnectionPool, receiverIDs, wallet.ID)
@@ -506,12 +496,12 @@ func Test_DisbursementManagementService_StartDisbursement_failure(t *testing.T) 
 		require.ErrorIs(t, err, ErrDisbursementNotReadyToStart)
 	})
 
-	t.Run("(APPROVAL FLOW ENABLED) returns an error if the disbursement hasn't been approved yet", func(t *testing.T) {
+	t.Run("(APPROVAL FLOW ENABLED) returns an error if the disbursement is started by its creator", func(t *testing.T) {
 		service := DisbursementManagementService{Models: models}
 
-		userID := "b6a3226f-b8b7-4f4a-9f1e-3f2f9e1c9f11"
+		userID := "9ae68f09-cad9-4311-9758-4ff59d2e9e6d"
 		disbursement := data.CreateDisbursementFixture(t, context.Background(), dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "disbursement - not yet approved",
+			Name:   "disbursement #1",
 			Status: data.ReadyDisbursementStatus,
 			Asset:  asset,
 			Wallet: wallet,
@@ -523,50 +513,6 @@ func Test_DisbursementManagementService_StartDisbursement_failure(t *testing.T) 
 				{
 					Status: data.ReadyDisbursementStatus,
 					UserID: userID,
-				},
-			},
-		})
-
-		user := &auth.User{
-			ID:    "some-other-user-id",
-			Email: "email@email.com",
-		}
-
-		// Enable approval workflow for org.
-		isApprovalRequired := true
-		err = models.Organizations.Update(ctx, &data.OrganizationUpdate{IsApprovalRequired: &isApprovalRequired})
-		require.NoError(t, err)
-
-		err = service.StartDisbursement(ctx, disbursement.ID, user, &distributionAcc)
-		require.ErrorIs(t, err, ErrDisbursementRequiresApprovalStep)
-
-		// rollback changes
-		isApprovalRequired = false
-		err = models.Organizations.Update(ctx, &data.OrganizationUpdate{IsApprovalRequired: &isApprovalRequired})
-		require.NoError(t, err)
-	})
-
-	t.Run("(APPROVAL FLOW ENABLED) returns an error if the disbursement is started by its creator", func(t *testing.T) {
-		service := DisbursementManagementService{Models: models}
-
-		userID := "9ae68f09-cad9-4311-9758-4ff59d2e9e6d"
-		disbursement := data.CreateDisbursementFixture(t, context.Background(), dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "disbursement #1",
-			Status: data.ApprovedDisbursementStatus,
-			Asset:  asset,
-			Wallet: wallet,
-			StatusHistory: []data.DisbursementStatusHistoryEntry{
-				{
-					Status: data.DraftDisbursementStatus,
-					UserID: userID,
-				},
-				{
-					Status: data.ReadyDisbursementStatus,
-					UserID: userID,
-				},
-				{
-					Status: data.ApprovedDisbursementStatus,
-					UserID: "an-approver-id",
 				},
 			},
 		})
@@ -684,249 +630,6 @@ func Test_DisbursementManagementService_StartDisbursement_failure(t *testing.T) 
 		// PendingTotal includes payments associated with 'readyDisbursement' that were moved from the draft to ready status
 		expectedErrStr := fmt.Sprintf("the disbursement %s failed due to an account balance (11111.00) that was insufficient to fulfill new amount (22222.00) along with the pending amount (1100.00). To complete this action, your distribution account (stellar:GAAHIL6ZW4QFNLCKALZ3YOIWPP4TXQ7B7J5IU7RLNVGQAV6GFDZHLDTA) needs to be recharged with at least 12211.00 USDT", disbursementInsufficientBalance.ID)
 		assert.Contains(t, buf.String(), expectedErrStr)
-	})
-}
-
-func Test_DisbursementManagementService_ApproveDisbursement(t *testing.T) {
-	dbt := dbtest.Open(t)
-	defer dbt.Close()
-	dbConnectionPool, err := db.OpenDBConnectionPool(dbt.DSN)
-	require.NoError(t, err)
-	defer dbConnectionPool.Close()
-
-	models, err := data.NewModels(dbConnectionPool)
-	require.NoError(t, err)
-
-	tnt := schema.Tenant{ID: "tenant-id"}
-	ctx := sdpcontext.SetTenantInContext(context.Background(), &tnt)
-	ctx = sdpcontext.SetTokenInContext(ctx, "token")
-
-	asset := data.GetAssetFixture(t, ctx, dbConnectionPool, data.FixtureAssetUSDC)
-	wallet := data.CreateDefaultWalletFixture(t, ctx, dbConnectionPool)
-
-	service := DisbursementManagementService{Models: models}
-
-	t.Run("returns an error if the disbursement doesn't exist", func(t *testing.T) {
-		err = service.ApproveDisbursement(ctx, "not-found-id", &auth.User{ID: "approver"})
-		require.ErrorIs(t, err, ErrDisbursementNotFound)
-	})
-
-	t.Run("returns an error if the disbursement status is not READY", func(t *testing.T) {
-		draftDisbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "draft disbursement",
-			Status: data.DraftDisbursementStatus,
-			Asset:  asset,
-			Wallet: wallet,
-		})
-
-		err = service.ApproveDisbursement(ctx, draftDisbursement.ID, &auth.User{ID: "approver"})
-		require.ErrorIs(t, err, ErrDisbursementNotReadyToApprove)
-	})
-
-	t.Run("successfully approves a READY disbursement when approval workflow is disabled", func(t *testing.T) {
-		userID := "creator-id"
-		disbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "ready disbursement",
-			Status: data.ReadyDisbursementStatus,
-			Asset:  asset,
-			Wallet: wallet,
-			StatusHistory: []data.DisbursementStatusHistoryEntry{
-				{Status: data.DraftDisbursementStatus, UserID: userID},
-				{Status: data.ReadyDisbursementStatus, UserID: userID},
-			},
-		})
-
-		// approval workflow is disabled by default, so the same user can approve their own upload
-		err = service.ApproveDisbursement(ctx, disbursement.ID, &auth.User{ID: userID})
-		require.NoError(t, err)
-
-		updated, err := models.Disbursements.Get(ctx, dbConnectionPool, disbursement.ID)
-		require.NoError(t, err)
-		assert.Equal(t, data.ApprovedDisbursementStatus, updated.Status)
-	})
-
-	t.Run("(APPROVAL REQUIRED) returns an error if the approver is the creator", func(t *testing.T) {
-		userID := "creator-id-2"
-		disbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "ready disbursement 2",
-			Status: data.ReadyDisbursementStatus,
-			Asset:  asset,
-			Wallet: wallet,
-			StatusHistory: []data.DisbursementStatusHistoryEntry{
-				{Status: data.DraftDisbursementStatus, UserID: userID},
-				{Status: data.ReadyDisbursementStatus, UserID: userID},
-			},
-		})
-
-		isApprovalRequired := true
-		err = models.Organizations.Update(ctx, &data.OrganizationUpdate{IsApprovalRequired: &isApprovalRequired})
-		require.NoError(t, err)
-		defer func() {
-			isApprovalRequired = false
-			err = models.Organizations.Update(ctx, &data.OrganizationUpdate{IsApprovalRequired: &isApprovalRequired})
-			require.NoError(t, err)
-		}()
-
-		err = service.ApproveDisbursement(ctx, disbursement.ID, &auth.User{ID: userID})
-		require.ErrorIs(t, err, ErrDisbursementApprovedByCreator)
-	})
-
-	t.Run("(APPROVAL REQUIRED) successfully approves when the approver differs from the creator", func(t *testing.T) {
-		userID := "creator-id-3"
-		disbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "ready disbursement 3",
-			Status: data.ReadyDisbursementStatus,
-			Asset:  asset,
-			Wallet: wallet,
-			StatusHistory: []data.DisbursementStatusHistoryEntry{
-				{Status: data.DraftDisbursementStatus, UserID: userID},
-				{Status: data.ReadyDisbursementStatus, UserID: userID},
-			},
-		})
-
-		isApprovalRequired := true
-		err = models.Organizations.Update(ctx, &data.OrganizationUpdate{IsApprovalRequired: &isApprovalRequired})
-		require.NoError(t, err)
-		defer func() {
-			isApprovalRequired = false
-			err = models.Organizations.Update(ctx, &data.OrganizationUpdate{IsApprovalRequired: &isApprovalRequired})
-			require.NoError(t, err)
-		}()
-
-		err = service.ApproveDisbursement(ctx, disbursement.ID, &auth.User{ID: "a-different-approver"})
-		require.NoError(t, err)
-
-		updated, err := models.Disbursements.Get(ctx, dbConnectionPool, disbursement.ID)
-		require.NoError(t, err)
-		assert.Equal(t, data.ApprovedDisbursementStatus, updated.Status)
-	})
-}
-
-func Test_DisbursementManagementService_SubmitDisbursement(t *testing.T) {
-	dbt := dbtest.Open(t)
-	defer dbt.Close()
-	dbConnectionPool, err := db.OpenDBConnectionPool(dbt.DSN)
-	require.NoError(t, err)
-	defer dbConnectionPool.Close()
-
-	models, err := data.NewModels(dbConnectionPool)
-	require.NoError(t, err)
-
-	tnt := schema.Tenant{ID: "tenant-id"}
-	ctx := sdpcontext.SetTenantInContext(context.Background(), &tnt)
-	ctx = sdpcontext.SetTokenInContext(ctx, "token")
-
-	asset := data.CreateAssetFixture(t, ctx, dbConnectionPool, assets.EURCAssetCode, assets.EURCAssetIssuerTestnet)
-	wallet := data.CreateDefaultWalletFixture(t, ctx, dbConnectionPool)
-
-	distributionAccPubKey := "GAAHIL6ZW4QFNLCKALZ3YOIWPP4TXQ7B7J5IU7RLNVGQAV6GFDZHLDTA"
-	distributionAcc := schema.NewStellarEnvTransactionAccount(distributionAccPubKey)
-
-	t.Run("returns an error if the disbursement doesn't exist", func(t *testing.T) {
-		service := DisbursementManagementService{Models: models}
-
-		err = service.SubmitDisbursement(ctx, "not-found-id", &auth.User{ID: "finance-officer"}, &distributionAcc)
-		require.ErrorIs(t, err, ErrDisbursementNotFound)
-	})
-
-	t.Run("returns an error if the disbursement status is not APPROVED", func(t *testing.T) {
-		service := DisbursementManagementService{Models: models}
-
-		readyDisbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "ready, not yet approved",
-			Status: data.ReadyDisbursementStatus,
-			Asset:  asset,
-			Wallet: wallet,
-		})
-
-		err = service.SubmitDisbursement(ctx, readyDisbursement.ID, &auth.User{ID: "finance-officer"}, &distributionAcc)
-		require.ErrorIs(t, err, ErrDisbursementNotReadyToSubmit)
-	})
-
-	t.Run("returns an error if the disbursement's wallet is disabled", func(t *testing.T) {
-		service := DisbursementManagementService{Models: models}
-
-		disabledWallet := data.CreateWalletFixture(t, ctx, dbConnectionPool, "disabled wallet", "https://home.com", "home.com", "home://")
-		data.EnableOrDisableWalletFixtures(t, ctx, dbConnectionPool, false, disabledWallet.ID)
-
-		approvedDisbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "approved, disabled wallet",
-			Status: data.ApprovedDisbursementStatus,
-			Asset:  asset,
-			Wallet: disabledWallet,
-		})
-
-		err = service.SubmitDisbursement(ctx, approvedDisbursement.ID, &auth.User{ID: "finance-officer"}, &distributionAcc)
-		require.ErrorIs(t, err, ErrDisbursementWalletDisabled)
-	})
-
-	t.Run("successfully submits an APPROVED disbursement", func(t *testing.T) {
-		approvedDisbursement := data.CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &data.Disbursement{
-			Name:   "approved disbursement",
-			Status: data.ApprovedDisbursementStatus,
-			Asset:  asset,
-			Wallet: wallet,
-			StatusHistory: []data.DisbursementStatusHistoryEntry{
-				{UserID: "uploader-id", Status: data.DraftDisbursementStatus},
-				{UserID: "uploader-id", Status: data.ReadyDisbursementStatus},
-				{UserID: "approver-id", Status: data.ApprovedDisbursementStatus},
-			},
-		})
-		defer data.DeleteAllDisbursementFixtures(t, ctx, dbConnectionPool)
-		defer data.DeleteAllReceiversFixtures(t, ctx, dbConnectionPool)
-		defer data.DeleteAllReceiverWalletsFixtures(t, ctx, dbConnectionPool)
-		defer data.DeleteAllPaymentsFixtures(t, ctx, dbConnectionPool)
-
-		receiver := data.CreateReceiverFixture(t, ctx, dbConnectionPool, &data.Receiver{})
-		rw := data.CreateReceiverWalletFixture(t, ctx, dbConnectionPool, receiver.ID, wallet.ID, data.DraftReceiversWalletStatus)
-		payment := data.CreatePaymentFixture(t, ctx, dbConnectionPool, models.Payment, &data.Payment{
-			ReceiverWallet: rw,
-			Disbursement:   approvedDisbursement,
-			Asset:          *asset,
-			Amount:         "100",
-			Status:         data.DraftPaymentStatus,
-		})
-
-		mHorizonClient := &horizonclient.MockClient{}
-		defer mHorizonClient.AssertExpectations(t)
-		mHorizonClient.
-			On("AccountDetail", horizonclient.AccountRequest{AccountID: distributionAccPubKey}).
-			Return(horizon.Account{
-				Balances: []horizon.Balance{
-					{
-						Balance: "10000000",
-						Asset:   base.Asset{Code: asset.Code, Issuer: asset.Issuer},
-					},
-				},
-			}, nil).
-			Once()
-
-		distAccSvc, err := NewDistributionAccountService(DistributionAccountServiceOptions{
-			HorizonClient: mHorizonClient,
-			CircleService: &circle.Service{},
-			NetworkType:   utils.TestnetNetworkType,
-		})
-		require.NoError(t, err)
-
-		service := &DisbursementManagementService{
-			Models:                     models,
-			DistributionAccountService: distAccSvc,
-		}
-
-		financeOfficer := &auth.User{ID: "finance-officer-id"}
-		err = service.SubmitDisbursement(ctx, approvedDisbursement.ID, financeOfficer, &distributionAcc)
-		require.NoError(t, err)
-
-		updated, err := models.Disbursements.Get(ctx, dbConnectionPool, approvedDisbursement.ID)
-		require.NoError(t, err)
-		assert.Equal(t, data.StartedDisbursementStatus, updated.Status)
-		lastHistoryEntry := updated.StatusHistory[len(updated.StatusHistory)-1]
-		assert.Equal(t, financeOfficer.ID, lastHistoryEntry.UserID)
-		assert.Equal(t, data.StartedDisbursementStatus, lastHistoryEntry.Status)
-
-		updatedPayment, err := models.Payment.Get(ctx, payment.ID, dbConnectionPool)
-		require.NoError(t, err)
-		assert.Equal(t, data.ReadyPaymentStatus, updatedPayment.Status)
 	})
 }
 

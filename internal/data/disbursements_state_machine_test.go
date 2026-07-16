@@ -80,26 +80,8 @@ func Test_DisbursementStatus_TransitionTo(t *testing.T) {
 			err:    nil,
 		},
 		{
-			name:   "user approves disbursement transition",
+			name:   "user starts disbursement transition",
 			actual: ReadyDisbursementStatus,
-			target: ApprovedDisbursementStatus,
-			err:    nil,
-		},
-		{
-			name:   "user rejects disbursement transition",
-			actual: ApprovedDisbursementStatus,
-			target: ReadyDisbursementStatus,
-			err:    nil,
-		},
-		{
-			name:   "user starts disbursement transition (approval not required)",
-			actual: ReadyDisbursementStatus,
-			target: StartedDisbursementStatus,
-			err:    nil,
-		},
-		{
-			name:   "finance officer submits disbursement transition",
-			actual: ApprovedDisbursementStatus,
 			target: StartedDisbursementStatus,
 			err:    nil,
 		},
@@ -167,17 +149,12 @@ func Test_DisbursementStatus_SourceStatuses(t *testing.T) {
 		{
 			name:                   "Ready",
 			targetStatus:           ReadyDisbursementStatus,
-			expectedSourceStatuses: []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus, ApprovedDisbursementStatus},
-		},
-		{
-			name:                   "Approved",
-			targetStatus:           ApprovedDisbursementStatus,
-			expectedSourceStatuses: []DisbursementStatus{ReadyDisbursementStatus},
+			expectedSourceStatuses: []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus},
 		},
 		{
 			name:                   "Started",
 			targetStatus:           StartedDisbursementStatus,
-			expectedSourceStatuses: []DisbursementStatus{ReadyDisbursementStatus, ApprovedDisbursementStatus, PausedDisbursementStatus},
+			expectedSourceStatuses: []DisbursementStatus{ReadyDisbursementStatus, PausedDisbursementStatus},
 		},
 		{
 			name:                   "Paused",
@@ -198,6 +175,6 @@ func Test_DisbursementStatus_SourceStatuses(t *testing.T) {
 }
 
 func Test_DisbursementStatus_DisbursementStatuses(t *testing.T) {
-	expectedStatuses := []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus, ApprovedDisbursementStatus, StartedDisbursementStatus, PausedDisbursementStatus, CompletedDisbursementStatus}
+	expectedStatuses := []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus, StartedDisbursementStatus, PausedDisbursementStatus, CompletedDisbursementStatus}
 	require.Equal(t, expectedStatuses, DisbursementStatuses())
 }

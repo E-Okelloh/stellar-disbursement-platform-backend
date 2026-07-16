@@ -10,13 +10,12 @@ type DisbursementStatus string
 const (
 	DraftDisbursementStatus     DisbursementStatus = "DRAFT"
 	ReadyDisbursementStatus     DisbursementStatus = "READY"
-	ApprovedDisbursementStatus  DisbursementStatus = "APPROVED"
 	StartedDisbursementStatus   DisbursementStatus = "STARTED"
 	PausedDisbursementStatus    DisbursementStatus = "PAUSED"
 	CompletedDisbursementStatus DisbursementStatus = "COMPLETED"
 )
 
-var NotStartedDisbursementStatuses = []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus, ApprovedDisbursementStatus}
+var NotStartedDisbursementStatuses = []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus}
 
 // TransitionTo transitions the disbursement status to the target state
 func (status DisbursementStatus) TransitionTo(targetState DisbursementStatus) error {
@@ -25,7 +24,7 @@ func (status DisbursementStatus) TransitionTo(targetState DisbursementStatus) er
 
 // DisbursementStatuses returns a list of all possible disbursement statuses
 func DisbursementStatuses() []DisbursementStatus {
-	return []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus, ApprovedDisbursementStatus, StartedDisbursementStatus, PausedDisbursementStatus, CompletedDisbursementStatus}
+	return []DisbursementStatus{DraftDisbursementStatus, ReadyDisbursementStatus, StartedDisbursementStatus, PausedDisbursementStatus, CompletedDisbursementStatus}
 }
 
 // SourceStatuses returns a list of states that the payment status can transition from given the target state
@@ -45,10 +44,7 @@ func DisbursementStateMachineWithInitialState(initialState DisbursementStatus) *
 	transitions := []StateTransition{
 		{From: DraftDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},       // instructions uploaded successfully
 		{From: ReadyDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},       // user re-uploads instructions
-		{From: ReadyDisbursementStatus.State(), To: ApprovedDisbursementStatus.State()},    // approver approves disbursement
-		{From: ReadyDisbursementStatus.State(), To: StartedDisbursementStatus.State()},     // start disbursement (when approval not required)
-		{From: ApprovedDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},    // approver rejects, back to ready
-		{From: ApprovedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},  // finance officer submits to Stellar
+		{From: ReadyDisbursementStatus.State(), To: StartedDisbursementStatus.State()},     // user starts disbursement
 		{From: StartedDisbursementStatus.State(), To: PausedDisbursementStatus.State()},    // user pauses disbursement
 		{From: PausedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},    // user resumes disbursement
 		{From: StartedDisbursementStatus.State(), To: CompletedDisbursementStatus.State()}, // all payments went through
@@ -60,7 +56,7 @@ func DisbursementStateMachineWithInitialState(initialState DisbursementStatus) *
 // Validate validates the disbursement status
 func (status DisbursementStatus) Validate() error {
 	switch DisbursementStatus(strings.ToUpper(string(status))) {
-	case DraftDisbursementStatus, ReadyDisbursementStatus, ApprovedDisbursementStatus, StartedDisbursementStatus, PausedDisbursementStatus, CompletedDisbursementStatus:
+	case DraftDisbursementStatus, ReadyDisbursementStatus, StartedDisbursementStatus, PausedDisbursementStatus, CompletedDisbursementStatus:
 		return nil
 	default:
 		return fmt.Errorf("invalid disbursement status: %s", status)
