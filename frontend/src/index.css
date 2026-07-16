@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -86,3 +85,4 @@ button.bg-emerald-600:hover {
 tr {
   transition: background-color 0.2s ease-in-out;
 }
+
