@@ -22,8 +22,8 @@ type DisbursementInstruction struct {
 	ExternalPaymentID string `csv:"paymentID"`
 	WalletAddress     string `csv:"walletAddress"`
 	WalletAddressMemo string `csv:"walletAddressMemo"`
-	RecipientName    string `csv:"RecipientName"`
-	CurrencyType     string `csv:"Currency type"`
+	RecipientName     string `csv:"RecipientName"`
+	CurrencyType      string `csv:"Currency type"`
 }
 
 func (di *DisbursementInstruction) Contact() (string, error) {

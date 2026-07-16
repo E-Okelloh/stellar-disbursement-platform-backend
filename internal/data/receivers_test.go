@@ -35,6 +35,8 @@ func Test_ReceiverColumnNames(t *testing.T) {
 				`updated_at`,
 				`COALESCE(phone_number, '') AS "phone_number"`,
 				`COALESCE(email, '') AS "email"`,
+				`COALESCE(recipient_name, '') AS "recipient_name"`,
+				`COALESCE(currency_type, '') AS "currency_type"`,
 			}, ",\n"),
 		},
 		{
@@ -47,6 +49,8 @@ func Test_ReceiverColumnNames(t *testing.T) {
 				`updated_at AS "receiver.updated_at"`,
 				`COALESCE(phone_number, '') AS "receiver.phone_number"`,
 				`COALESCE(email, '') AS "receiver.email"`,
+				`COALESCE(recipient_name, '') AS "receiver.recipient_name"`,
+				`COALESCE(currency_type, '') AS "receiver.currency_type"`,
 			}, ",\n"),
 		},
 		{
@@ -59,6 +63,8 @@ func Test_ReceiverColumnNames(t *testing.T) {
 				`r.updated_at AS "receiver.updated_at"`,
 				`COALESCE(r.phone_number, '') AS "receiver.phone_number"`,
 				`COALESCE(r.email, '') AS "receiver.email"`,
+				`COALESCE(r.recipient_name, '') AS "receiver.recipient_name"`,
+				`COALESCE(r.currency_type, '') AS "receiver.currency_type"`,
 			}, ",\n"),
 		},
 	}
@@ -1423,4 +1429,57 @@ func Test_ReceiversModel_GetByContacts(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_ReceiverModel_Insert_RecipientNameAndCurrencyType(t *testing.T) {
+	dbt := dbtest.Open(t)
+	defer dbt.Close()
+
+	dbConnectionPool, err := db.OpenDBConnectionPool(dbt.DSN)
+	require.NoError(t, err)
+	defer dbConnectionPool.Close()
+
+	ctx := context.Background()
+	receiverModel := ReceiverModel{}
+
+	t.Run("persists recipient_name and currency_type when provided", func(t *testing.T) {
+		defer DeleteAllReceiversFixtures(t, ctx, dbConnectionPool)
+
+		phone := "+14152223333"
+		externalID := "ext-id-1"
+		recipientName := "Jane Doe"
+		currencyType := "USD"
+
+		receiver, insertErr := receiverModel.Insert(ctx, dbConnectionPool, ReceiverInsert{
+			PhoneNumber:   &phone,
+			ExternalID:    &externalID,
+			RecipientName: &recipientName,
+			CurrencyType:  &currencyType,
+		})
+		require.NoError(t, insertErr)
+
+		assert.Equal(t, recipientName, receiver.RecipientName)
+		assert.Equal(t, currencyType, receiver.CurrencyType)
+
+		fetched, getErr := receiverModel.Get(ctx, dbConnectionPool, receiver.ID)
+		require.NoError(t, getErr)
+		assert.Equal(t, recipientName, fetched.RecipientName)
+		assert.Equal(t, currencyType, fetched.CurrencyType)
+	})
+
+	t.Run("leaves recipient_name and currency_type empty when not provided", func(t *testing.T) {
+		defer DeleteAllReceiversFixtures(t, ctx, dbConnectionPool)
+
+		phone := "+14152223334"
+		externalID := "ext-id-2"
+
+		receiver, insertErr := receiverModel.Insert(ctx, dbConnectionPool, ReceiverInsert{
+			PhoneNumber: &phone,
+			ExternalID:  &externalID,
+		})
+		require.NoError(t, insertErr)
+
+		assert.Empty(t, receiver.RecipientName)
+		assert.Empty(t, receiver.CurrencyType)
+	})
 }
