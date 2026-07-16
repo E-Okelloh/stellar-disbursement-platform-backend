@@ -10,7 +10,7 @@ func (u UserRole) String() string {
 
 func (u UserRole) IsValid() bool {
 	switch u {
-	case OwnerUserRole, FinancialControllerUserRole, DeveloperUserRole, BusinessUserRole, InitiatorUserRole, ApproverUserRole:
+	case OwnerUserRole, FinancialControllerUserRole, DeveloperUserRole, BusinessUserRole, InitiatorUserRole, ApproverUserRole, UploaderUserRole, FinanceOfficerUserRole:
 		return true
 	}
 	return false
@@ -30,6 +30,10 @@ const (
 	InitiatorUserRole UserRole = "initiator"
 	// ApproverUserRole can submit disbursements but not create or save new ones. Mutually exclusive with InitiatorUserRole.
 	ApproverUserRole UserRole = "approver"
+	// UploaderUserRole can create drafts by uploading CSV files.
+	UploaderUserRole UserRole = "uploader"
+	// FinanceOfficerUserRole can submit approved disbursements to Stellar.
+	FinanceOfficerUserRole UserRole = "finance_officer"
 )
 
 // GetAllRoles returns all roles available.
@@ -41,6 +45,8 @@ func GetAllRoles() []UserRole {
 		BusinessUserRole,
 		InitiatorUserRole,
 		ApproverUserRole,
+		UploaderUserRole,
+		FinanceOfficerUserRole,
 	}
 }
 
@@ -52,6 +58,8 @@ func GetBusinessOperationRoles() []UserRole {
 		BusinessUserRole,
 		InitiatorUserRole,
 		ApproverUserRole,
+		UploaderUserRole,
+		FinanceOfficerUserRole,
 	}
 }
 

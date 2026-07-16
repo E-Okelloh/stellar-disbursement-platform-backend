@@ -17,6 +17,8 @@ func Test_UserRole_IsValid(t *testing.T) {
 		{BusinessUserRole, true},
 		{InitiatorUserRole, true},
 		{ApproverUserRole, true},
+		{UploaderUserRole, true},
+		{FinanceOfficerUserRole, true},
 		{UserRole("invalid"), false},
 		{UserRole(""), false},
 		{UserRole("unknown"), false},
@@ -38,6 +40,27 @@ func Test_GetAllRoles(t *testing.T) {
 		BusinessUserRole,
 		InitiatorUserRole,
 		ApproverUserRole,
+		UploaderUserRole,
+		FinanceOfficerUserRole,
+	}
+
+	assert.Equal(t, len(expectedRoles), len(roles))
+
+	for _, expectedRole := range expectedRoles {
+		assert.Contains(t, roles, expectedRole)
+	}
+}
+
+func Test_GetBusinessOperationRoles(t *testing.T) {
+	roles := GetBusinessOperationRoles()
+	expectedRoles := []UserRole{
+		OwnerUserRole,
+		FinancialControllerUserRole,
+		BusinessUserRole,
+		InitiatorUserRole,
+		ApproverUserRole,
+		UploaderUserRole,
+		FinanceOfficerUserRole,
 	}
 
 	assert.Equal(t, len(expectedRoles), len(roles))
