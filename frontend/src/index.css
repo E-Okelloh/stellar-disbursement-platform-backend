@@ -26,10 +26,11 @@
   --color-slate-50: #fefcf3;    /* Very light beige/warm background */
   --color-slate-100: #f8efda;
   --color-slate-200: #f2e1bb;
-  --color-slate-800: #002266;
-  --color-slate-900: #003388;    /* SAPCONE Navy text */
+  --color-slate-800: #4a4a4a;
+  --color-slate-900: #606161;    /* SAPCONE body text gray (from turkanapeople.org) */
 
-  --font-sans: "Outfit", system-ui, -apple-system, sans-serif;
+  --font-sans: "ABeeZee", system-ui, -apple-system, sans-serif;
+  --font-heading: "Barlow Condensed", var(--font-sans);
 }
 
 :root {
@@ -68,6 +69,12 @@ html, body {
   padding: 0;
   font-family: var(--font-sans);
   min-height: 100vh;
+}
+
+/* Heading style matched to turkanapeople.org (SAPCONE's site): terracotta color, condensed font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--color-emerald-600);
 }
 
 /* Premium micro-animations for interactive elements */

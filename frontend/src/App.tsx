@@ -2,6 +2,8 @@ console.log("[DisbursementStudio] src/App.tsx execution started");
 
 import React, { useState, useEffect } from "react";
 
+import { LandingPage } from "./LandingPage";
+
 // TypeScript definitions matching SAPCONE DisburseFlow schema
 interface Recipient {
   phone: string; // receivers.phone (external ID) - Contact channel for SMS
@@ -197,11 +199,64 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+function ExpandChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
+function PaymentsExpandPanel({ isLoading, payments }: { isLoading: boolean; payments: any[] }) {
+  return (
+    <div className="border border-t-0 border-slate-200 rounded-b-xl bg-white px-5 py-4 -mt-1">
+      {isLoading ? (
+        <div className="text-xs text-slate-400 py-2">Loading payments…</div>
+      ) : payments.length === 0 ? (
+        <div className="text-xs text-slate-400 py-2">No payments found for this disbursement.</div>
+      ) : (
+        <div className="space-y-2">
+          {payments.map((p: any) => (
+            <div
+              key={p.id}
+              className="flex justify-between items-center text-xs py-2 border-b border-slate-100 last:border-b-0"
+            >
+              <span className="text-slate-500">
+                {p.external_payment_id || p.id}
+                {p.receiver_wallet?.receiver?.phone_number ? ` · ${p.receiver_wallet.receiver.phone_number}` : ""}
+              </span>
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-slate-700">
+                  {p.amount} {p.asset?.code}
+                </span>
+                <span
+                  className={`font-semibold uppercase ${
+                    p.status === "SUCCESS" ? "text-emerald-600" : p.status === "FAILED" ? "text-red-600" : "text-slate-400"
+                  }`}
+                >
+                  {p.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const AppContent = () => {
   console.log("[DisbursementStudio] AppContent rendering...");
 
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(!!getAuthToken());
+  const [showLanding, setShowLanding] = useState(!getAuthToken());
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [mfaRequired, setMfaRequired] = useState(false);
@@ -225,6 +280,8 @@ const AppContent = () => {
   const canUpload = roles.some((r) => ["owner", "financial_controller", "initiator", "uploader"].includes(r));
   const canApprove = roles.some((r) => ["owner", "financial_controller", "approver"].includes(r));
   const canSubmit = roles.some((r) => ["owner", "financial_controller", "finance_officer"].includes(r));
+  // Balance is financial data - only roles that actually execute/oversee payments should see it.
+  const canViewBalance = roles.some((r) => ["owner", "financial_controller", "finance_officer"].includes(r));
   const canManageUsers = roles.includes("owner");
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -336,6 +393,9 @@ const AppContent = () => {
 
   // Loading skeleton state
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
+  const [expandedDisbursementId, setExpandedDisbursementId] = useState<string | null>(null);
+  const [expandedDisbursementPayments, setExpandedDisbursementPayments] = useState<any[]>([]);
+  const [isLoadingExpandedPayments, setIsLoadingExpandedPayments] = useState<boolean>(false);
 
   // Auto-dismiss helper for notifications
   const showNotification = (type: "success" | "error", message: string) => {
@@ -649,6 +709,24 @@ const AppContent = () => {
   };
 
   // Submits one approved disbursement to Stellar and polls its payments until they settle.
+  const handleToggleDisbursementRow = async (id: string) => {
+    if (expandedDisbursementId === id) {
+      setExpandedDisbursementId(null);
+      return;
+    }
+    setExpandedDisbursementId(id);
+    setIsLoadingExpandedPayments(true);
+    try {
+      const paymentsData = await fetchApi(`/payments?disbursement_id=${id}`);
+      setExpandedDisbursementPayments(paymentsData.data || []);
+    } catch (err) {
+      console.error("Error fetching payments for disbursement", err);
+      setExpandedDisbursementPayments([]);
+    } finally {
+      setIsLoadingExpandedPayments(false);
+    }
+  };
+
   const handleSubmitRow = async (id: string) => {
     setSubmittingId(id);
     setSubmissionLogs([]);
@@ -781,6 +859,10 @@ const AppContent = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, currentUser]);
 
+  if (!isAuthenticated && showLanding) {
+    return <LandingPage onLogin={() => setShowLanding(false)} />;
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex items-center justify-center p-4">
@@ -888,21 +970,23 @@ const AppContent = () => {
                 : "Fetching address..."}
             </div>
           </div>
-          <div className="flex items-center gap-3 text-xs bg-white border border-slate-200 rounded-lg p-1.5 shadow-xs">
-            <span className={`font-bold block text-sm ${selectedVaultAsset === "USDC" ? "text-emerald-600" : "text-blue-600"}`}>
-              {selectedVaultAsset === "USDC"
-                ? `${(distBalance * 129).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh`
-                : `${(xlmBalance * 11.5).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh`}
-            </span>
-            <select
-              value={selectedVaultAsset}
-              onChange={(e) => setSelectedVaultAsset(e.target.value as "USDC" | "XLM")}
-              className="bg-slate-50 border border-slate-200 text-slate-700 rounded px-1.5 py-0.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="USDC">USDC</option>
-              <option value="XLM">XLM</option>
-            </select>
-          </div>
+          {canViewBalance && (
+            <div className="flex items-center gap-3 text-xs bg-white border border-slate-200 rounded-lg p-1.5 shadow-xs">
+              <span className={`font-bold block text-sm ${selectedVaultAsset === "USDC" ? "text-emerald-600" : "text-blue-600"}`}>
+                {selectedVaultAsset === "USDC"
+                  ? `${(distBalance * 129).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh`
+                  : `${(xlmBalance * 11.5).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh`}
+              </span>
+              <select
+                value={selectedVaultAsset}
+                onChange={(e) => setSelectedVaultAsset(e.target.value as "USDC" | "XLM")}
+                className="bg-slate-50 border border-slate-200 text-slate-700 rounded px-1.5 py-0.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="USDC">USDC</option>
+                <option value="XLM">XLM</option>
+              </select>
+            </div>
+          )}
           <button
             onClick={handleLogout}
             className="text-xs font-semibold text-slate-500 hover:text-red-600 transition-colors"
@@ -1297,37 +1381,51 @@ const AppContent = () => {
             ) : (
               <div className="space-y-3">
                 {approvalsQueue.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-slate-50 border border-slate-200 p-5 rounded-xl"
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
-                      <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center flex-wrap">
-                        <span>ID: {item.id}</span>
-                        <span>•</span>
-                        <span>{new Date(item.created_at).toLocaleString()}</span>
-                        <span>•</span>
-                        <span className="text-emerald-600 font-semibold">
-                          {item.total_payments} Payouts ({item.asset?.code})
-                        </span>
+                  <div key={item.id}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleToggleDisbursementRow(item.id)}
+                      onKeyDown={(e) => e.key === "Enter" && handleToggleDisbursementRow(item.id)}
+                      aria-expanded={expandedDisbursementId === item.id}
+                      className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-slate-50 border border-slate-200 p-5 rounded-xl hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200"
+                    >
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
+                        <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center flex-wrap">
+                          <span>ID: {item.id}</span>
+                          <span>•</span>
+                          <span>{new Date(item.created_at).toLocaleString()}</span>
+                          <span>•</span>
+                          <span className="text-emerald-600 font-semibold">
+                            {item.total_payments} Payouts ({item.asset?.code})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="font-extrabold text-sm text-emerald-600">
+                          $
+                          {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}{" "}
+                          {item.asset?.code}
+                        </div>
+                        <button
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveRow(item.id);
+                          }}
+                        >
+                          Approve
+                        </button>
+                        <ExpandChevron expanded={expandedDisbursementId === item.id} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="font-extrabold text-sm text-emerald-600">
-                        $
-                        {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}{" "}
-                        {item.asset?.code}
-                      </div>
-                      <button
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all text-xs"
-                        onClick={() => handleApproveRow(item.id)}
-                      >
-                        Approve
-                      </button>
-                    </div>
+
+                    {expandedDisbursementId === item.id && (
+                      <PaymentsExpandPanel isLoading={isLoadingExpandedPayments} payments={expandedDisbursementPayments} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -1366,7 +1464,14 @@ const AppContent = () => {
                     key={item.id}
                     className="bg-slate-50 border border-slate-200 p-5 rounded-xl"
                   >
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleToggleDisbursementRow(item.id)}
+                      onKeyDown={(e) => e.key === "Enter" && handleToggleDisbursementRow(item.id)}
+                      aria-expanded={expandedDisbursementId === item.id}
+                      className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 cursor-pointer"
+                    >
                       <div>
                         <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
                         <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center flex-wrap">
@@ -1388,12 +1493,20 @@ const AppContent = () => {
                         <button
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-xs"
                           disabled={submittingId === item.id}
-                          onClick={() => handleSubmitRow(item.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubmitRow(item.id);
+                          }}
                         >
                           {submittingId === item.id ? "Submitting…" : "Submit"}
                         </button>
+                        <ExpandChevron expanded={expandedDisbursementId === item.id} />
                       </div>
                     </div>
+
+                    {expandedDisbursementId === item.id && submittingId !== item.id && (
+                      <PaymentsExpandPanel isLoading={isLoadingExpandedPayments} payments={expandedDisbursementPayments} />
+                    )}
 
                     {submittingId === item.id && (
                       <div className="mt-4 p-4 bg-slate-900 border border-slate-800 rounded-xl font-mono text-xs text-emerald-400 max-h-[200px] overflow-y-auto shadow-inner">
@@ -1455,34 +1568,43 @@ const AppContent = () => {
                 </div>
               ) : (
                 disbursementHistory.map((item) => (
-                  <div
-                    className="flex justify-between items-center bg-slate-50 border border-slate-200 p-5 rounded-xl hover:shadow-md transition-all duration-200"
-                    key={item.id}
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
-                      <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center">
-                        <span>ID: {item.id}</span>
-                        <span>•</span>
-                        <span>{new Date(item.created_at).toLocaleString()}</span>
-                        <span>•</span>
-                        <span className="text-emerald-600 font-semibold">
-                          {item.total_payments} Payouts ({item.asset?.code})
+                  <div key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleDisbursementRow(item.id)}
+                      aria-expanded={expandedDisbursementId === item.id}
+                      className="w-full text-left flex justify-between items-center bg-slate-50 border border-slate-200 p-5 rounded-xl hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200"
+                    >
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
+                        <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center">
+                          <span>ID: {item.id}</span>
+                          <span>•</span>
+                          <span>{new Date(item.created_at).toLocaleString()}</span>
+                          <span>•</span>
+                          <span className="text-emerald-600 font-semibold">
+                            {item.total_payments} Payouts ({item.asset?.code})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="font-extrabold text-sm text-emerald-600">
+                          $
+                          {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}{" "}
+                          {item.asset?.code}
+                        </div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase">
+                          {item.status}
                         </span>
+                        <ExpandChevron expanded={expandedDisbursementId === item.id} />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="font-extrabold text-sm text-emerald-600">
-                        $
-                        {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}{" "}
-                        {item.asset?.code}
-                      </div>
-                      <span className="text-xs font-semibold text-slate-500 uppercase">
-                        {item.status}
-                      </span>
-                    </div>
+                    </button>
+
+                    {expandedDisbursementId === item.id && (
+                      <PaymentsExpandPanel isLoading={isLoadingExpandedPayments} payments={expandedDisbursementPayments} />
+                    )}
                   </div>
                 ))
               )}
