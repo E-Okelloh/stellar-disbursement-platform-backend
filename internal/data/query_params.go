@@ -43,6 +43,7 @@ const (
 	FilterKeyID               FilterKey = "id"
 	FilterKeyStatus           FilterKey = "status"
 	FilterKeyReceiverID       FilterKey = "receiver_id"
+	FilterKeyDisbursementID   FilterKey = "disbursement_id"
 	FilterKeyPaymentID        FilterKey = "payment_id"
 	FilterKeyReceiverWalletID FilterKey = "receiver_wallet_id"
 	FilterKeyCompletedAt      FilterKey = "completed_at"
