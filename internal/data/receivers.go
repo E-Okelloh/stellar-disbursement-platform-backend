@@ -21,12 +21,14 @@ var (
 )
 
 type Receiver struct {
-	ID          string     `json:"id" db:"id"`
-	Email       string     `json:"email,omitempty" db:"email"`
-	PhoneNumber string     `json:"phone_number,omitempty" db:"phone_number"`
-	ExternalID  string     `json:"external_id,omitempty" db:"external_id"`
-	CreatedAt   *time.Time `json:"created_at,omitempty" db:"created_at"`
-	UpdatedAt   *time.Time `json:"updated_at,omitempty" db:"updated_at"`
+	ID            string     `json:"id" db:"id"`
+	Email         string     `json:"email,omitempty" db:"email"`
+	PhoneNumber   string     `json:"phone_number,omitempty" db:"phone_number"`
+	ExternalID    string     `json:"external_id,omitempty" db:"external_id"`
+	CreatedAt     *time.Time `json:"created_at,omitempty" db:"created_at"`
+	UpdatedAt     *time.Time `json:"updated_at,omitempty" db:"updated_at"`
+	RecipientName string     `json:"recipient_name,omitempty" db:"recipient_name"`
+	CurrencyType  string     `json:"currency_type,omitempty" db:"currency_type"`
 	ReceiverStats
 }
 
@@ -74,6 +76,8 @@ func ReceiverColumnNames(tableReference, resultAlias string) string {
 		CoalesceStringColumns: []string{
 			"phone_number",
 			"email",
+			"recipient_name",
+			"currency_type",
 		},
 	}.Build()
 
@@ -106,9 +110,11 @@ var (
 type ReceiverModel struct{}
 
 type ReceiverInsert struct {
-	PhoneNumber *string `db:"phone_number"`
-	Email       *string `db:"email"`
-	ExternalID  *string `db:"external_id"`
+	PhoneNumber   *string `db:"phone_number"`
+	Email         *string `db:"email"`
+	ExternalID    *string `db:"external_id"`
+	RecipientName *string `db:"recipient_name"`
+	CurrencyType  *string `db:"currency_type"`
 }
 
 type ReceiverUpdate ReceiverInsert
@@ -311,16 +317,20 @@ func (r *ReceiverModel) Insert(ctx context.Context, sqlExec db.SQLExecuter, inse
 		INSERT INTO receivers (
 			phone_number,
 			email,
-			external_id
+			external_id,
+			recipient_name,
+			currency_type
 		) VALUES (
 			$1,
 			$2,
-		    $3
+		    $3,
+			$4,
+			$5
 		) RETURNING
 			` + ReceiverColumnNames("", "")
 
 	var receiver Receiver
-	err := sqlExec.GetContext(ctx, &receiver, query, insert.PhoneNumber, insert.Email, insert.ExternalID)
+	err := sqlExec.GetContext(ctx, &receiver, query, insert.PhoneNumber, insert.Email, insert.ExternalID, insert.RecipientName, insert.CurrencyType)
 	if err != nil {
 		var pqError *pq.Error
 		if errors.As(err, &pqError) && pqError.Code == "23505" {

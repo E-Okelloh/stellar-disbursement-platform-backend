@@ -22,6 +22,8 @@ type DisbursementInstruction struct {
 	ExternalPaymentID string `csv:"paymentID"`
 	WalletAddress     string `csv:"walletAddress"`
 	WalletAddressMemo string `csv:"walletAddressMemo"`
+	RecipientName     string `csv:"RecipientName"`
+	CurrencyType      string `csv:"Currency type"`
 }
 
 func (di *DisbursementInstruction) Contact() (string, error) {
@@ -282,6 +284,12 @@ func (di DisbursementInstructionModel) createReceiverFromInstructionIfNeeded(ctx
 		}
 		if instruction.ID != "" {
 			receiverInsert.ExternalID = &instruction.ID
+		}
+		if instruction.RecipientName != "" {
+			receiverInsert.RecipientName = &instruction.RecipientName
+		}
+		if instruction.CurrencyType != "" {
+			receiverInsert.CurrencyType = &instruction.CurrencyType
 		}
 		_, insertErr := di.receiverModel.Insert(ctx, dbTx, receiverInsert)
 		if insertErr != nil {
