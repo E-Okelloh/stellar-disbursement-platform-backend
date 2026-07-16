@@ -64,7 +64,7 @@ type PaymentModel struct {
 var (
 	DefaultPaymentSortField = SortFieldUpdatedAt
 	DefaultPaymentSortOrder = SortOrderDESC
-	AllowedPaymentFilters   = []FilterKey{FilterKeyStatus, FilterKeyCreatedAtAfter, FilterKeyCreatedAtBefore, FilterKeyReceiverID, FilterKeyPaymentType}
+	AllowedPaymentFilters   = []FilterKey{FilterKeyStatus, FilterKeyCreatedAtAfter, FilterKeyCreatedAtBefore, FilterKeyReceiverID, FilterKeyDisbursementID, FilterKeyPaymentType}
 	AllowedPaymentSorts     = []SortField{SortFieldCreatedAt, SortFieldUpdatedAt}
 )
 
@@ -665,6 +665,9 @@ func newPaymentQuery(baseQuery string, queryParams *QueryParams, sqlExec db.SQLE
 	}
 	if queryParams.Filters[FilterKeyReceiverID] != nil {
 		qb.AddCondition("p.receiver_id = ?", queryParams.Filters[FilterKeyReceiverID])
+	}
+	if queryParams.Filters[FilterKeyDisbursementID] != nil {
+		qb.AddCondition("p.disbursement_id = ?", queryParams.Filters[FilterKeyDisbursementID])
 	}
 	if queryParams.Filters[FilterKeyCreatedAtAfter] != nil {
 		qb.AddCondition("p.created_at >= ?", queryParams.Filters[FilterKeyCreatedAtAfter])

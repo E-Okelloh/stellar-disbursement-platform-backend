@@ -447,6 +447,69 @@ func Test_PaymentModelGetAll(t *testing.T) {
 			*vibrantWalletPayment,
 		}, payments)
 	})
+
+	t.Run("filters payments by disbursement ID", func(t *testing.T) {
+		models, err := NewModels(dbConnectionPool)
+		require.NoError(t, err)
+
+		DeleteAllPaymentsFixtures(t, ctx, dbConnectionPool)
+		DeleteAllDisbursementFixtures(t, ctx, dbConnectionPool)
+		DeleteAllAssetFixtures(t, ctx, dbConnectionPool)
+		DeleteAllReceiverWalletsFixtures(t, ctx, dbConnectionPool)
+		DeleteAllReceiversFixtures(t, ctx, dbConnectionPool)
+		DeleteAllWalletFixtures(t, ctx, dbConnectionPool)
+
+		usdc := CreateAssetFixture(t, ctx, dbConnectionPool, "USDC", "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVV")
+		wallet := CreateWalletFixture(t, ctx, dbConnectionPool, "Demo Wallet", "https://demo-wallet.stellar.org", "https://demo-wallet.stellar.org", "demo-wallet-server.stellar.org")
+
+		receiver1 := CreateReceiverFixture(t, ctx, dbConnectionPool, &Receiver{})
+		receiver2 := CreateReceiverFixture(t, ctx, dbConnectionPool, &Receiver{})
+		receiverWallet1 := CreateReceiverWalletFixture(t, ctx, dbConnectionPool, receiver1.ID, wallet.ID, ReadyReceiversWalletStatus)
+		receiverWallet2 := CreateReceiverWalletFixture(t, ctx, dbConnectionPool, receiver2.ID, wallet.ID, ReadyReceiversWalletStatus)
+
+		disbursement1 := CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &Disbursement{
+			Name:   "disbursement 1",
+			Status: ReadyDisbursementStatus,
+			Asset:  usdc,
+			Wallet: wallet,
+		})
+
+		disbursement2 := CreateDisbursementFixture(t, ctx, dbConnectionPool, models.Disbursements, &Disbursement{
+			Name:   "disbursement 2",
+			Status: ReadyDisbursementStatus,
+			Asset:  usdc,
+			Wallet: wallet,
+		})
+
+		expectedPayment := CreatePaymentFixture(t, ctx, dbConnectionPool, models.Payment, &Payment{
+			Amount:         "100",
+			Status:         ReadyPaymentStatus,
+			Disbursement:   disbursement1,
+			Asset:          *usdc,
+			ReceiverWallet: receiverWallet1,
+		})
+
+		_ = CreatePaymentFixture(t, ctx, dbConnectionPool, models.Payment, &Payment{
+			Amount:         "200",
+			Status:         ReadyPaymentStatus,
+			Disbursement:   disbursement2,
+			Asset:          *usdc,
+			ReceiverWallet: receiverWallet2,
+		})
+
+		payments, err := models.Payment.GetAll(ctx, &QueryParams{
+			Filters: map[FilterKey]interface{}{
+				FilterKeyDisbursementID: disbursement1.ID,
+			},
+			SortBy:    DefaultPaymentSortField,
+			SortOrder: DefaultPaymentSortOrder,
+		}, dbConnectionPool, QueryTypeSelectPaginated)
+		require.NoError(t, err)
+
+		assert.Len(t, payments, 1)
+		assert.Equal(t, expectedPayment.ID, payments[0].ID)
+		assert.Equal(t, disbursement1.ID, payments[0].Disbursement.ID)
+	})
 }
 
 func Test_PaymentModel_GetByIDs(t *testing.T) {
