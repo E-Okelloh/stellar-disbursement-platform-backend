@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SAPCONE — Sustainable Approaches for Community Empowerment</title>
+<meta name="description" content="SAPCONE partners with pastoralist communities in Northern Kenya and Southern Ethiopia to build thriving, resilient, and peaceful communities through peace, health, education, and humanitarian programs." />
+<link rel="icon" href="./icon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green-50: #eaf4ed;
+    --green-100: #cae4d3;
+    --green-200: #9dd0b0;
+    --green-400: #3ea366;
+    --green-500: #1b8d4e;
+    --green-600: #068241;
+    --green-700: #096837;
+    --green-800: #0a522e;
+    --green-900: #0a4327;
+
+    --rust-100: #f5b2a3;
+    --rust-400: #d63d21;
+    --rust-500: #c2381f;
+    --rust-600: #b23e25;
+    --rust-700: #9b2b16;
+
+    --cream-50: #fefcf3;
+    --cream-100: #f8efda;
+    --cream-200: #f2e1bb;
+    --navy-800: #002266;
+    --navy-900: #003388;
+
+    --ink: #1c1d1a;
+    --ink-soft: #4a4d45;
+    --border: #e7ddc4;
+
+    --font: "Outfit", system-ui, -apple-system, sans-serif;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--cream-50);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; }
+  .wrap {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  section { padding: 96px 0; }
+  @media (max-width: 720px) {
+    section { padding: 64px 0; }
+  }
+
+  h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.02em; }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--green-700);
+    background: var(--green-50);
+    border: 1px solid var(--green-200);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--rust-600); }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(254, 252, 243, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 76px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--green-800);
+    text-decoration: none;
+  }
+  .brand svg { width: 30px; height: 30px; }
+  .brand small {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  nav.links { display: flex; align-items: center; gap: 36px; }
+  nav.links a {
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--ink);
+    opacity: 0.85;
+  }
+  nav.links a:hover { opacity: 1; color: var(--green-700); }
+  .nav-actions { display: flex; align-items: center; gap: 14px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .btn-primary { background: var(--green-600); color: #fff; box-shadow: 0 1px 2px rgba(6,130,65,0.15); }
+  .btn-primary:hover { background: var(--green-700); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--green-800); border-color: var(--border); }
+  .btn-ghost:hover { background: var(--green-50); }
+  .btn-light { background: #fff; color: var(--green-800); }
+  .btn-light:hover { background: var(--green-50); }
+
+  .menu-toggle {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  @media (max-width: 900px) {
+    nav.links, .nav-actions .btn-ghost { display: none; }
+    .menu-toggle { display: flex; }
+  }
+  .mobile-panel {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .mobile-panel.open { display: flex; }
+  .mobile-panel a {
+    padding: 12px 6px;
+    text-decoration: none;
+    color: var(--ink);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 88px 0 110px;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(6,130,65,0.14), transparent 60%),
+      radial-gradient(700px 500px at 0% 110%, rgba(178,62,37,0.10), transparent 60%);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 56px;
+    align-items: center;
+  }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+  .hero h1 {
+    font-size: clamp(2.2rem, 4.6vw, 3.4rem);
+    line-height: 1.08;
+    color: var(--navy-900);
+  }
+  .hero h1 span { color: var(--green-600); }
+  .hero p.lead {
+    margin-top: 22px;
+    font-size: 1.12rem;
+    color: var(--ink-soft);
+    max-width: 46ch;
+  }
+  .hero-ctas { display: flex; gap: 14px; margin-top: 34px; flex-wrap: wrap; }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 28px;
+    margin-top: 48px;
+  }
+  @media (max-width: 520px) { .hero-stats { grid-template-columns: repeat(2, auto); } }
+  .stat b { display: block; font-size: 1.7rem; color: var(--navy-900); font-weight: 800; }
+  .stat span { font-size: 0.82rem; color: var(--ink-soft); }
+
+  .hero-visual {
+    position: relative;
+    border-radius: 24px;
+    background: linear-gradient(155deg, var(--green-700), var(--green-900) 65%);
+    padding: 40px;
+    color: #fff;
+    overflow: hidden;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .hero-visual::before {
+    content: "";
+    position: absolute;
+    inset: -40% -20% auto auto;
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.14), transparent 70%);
+  }
+  .hero-visual .quote-mark { font-size: 3rem; opacity: 0.35; line-height: 1; font-weight: 800; }
+  .hero-visual blockquote {
+    margin: 4px 0 0;
+    font-size: 1.28rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .hero-visual footer-note { display: block; margin-top: 18px; font-size: 0.85rem; opacity: 0.75; }
+  .hero-visual .map-list {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 30px;
+  }
+  .pill {
+    font-size: 0.76rem;
+    font-weight: 600;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.24);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+
+  /* ---------- Section headers ---------- */
+  .section-head { max-width: 640px; margin-bottom: 48px; }
+  .section-head h2 { font-size: clamp(1.7rem, 3vw, 2.3rem); color: var(--navy-900); }
+  .section-head p { margin-top: 14px; color: var(--ink-soft); font-size: 1.02rem; }
+  .section-alt { background: var(--cream-100); }
+
+  /* ---------- Values ---------- */
+  .values-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 900px) { .values-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .values-grid { grid-template-columns: 1fr; } }
+  .value-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 26px;
+  }
+  .value-card .icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--green-50);
+    color: var(--green-700);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    font-size: 1.2rem;
+  }
+  .value-card h3 { font-size: 1.02rem; color: var(--navy-900); }
+  .value-card p { margin: 8px 0 0; font-size: 0.9rem; color: var(--ink-soft); }
+
+  /* ---------- Thematic areas ---------- */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 900px) { .theme-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .theme-grid { grid-template-columns: 1fr; } }
+  .theme-card {
+    position: relative;
+    border-radius: 18px;
+    padding: 28px;
+    background: #fff;
+    border: 1px solid var(--border);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .theme-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px rgba(6,68,39,0.09);
+    border-color: var(--green-200);
+  }
+  .theme-card .num {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--rust-600);
+    letter-spacing: 0.06em;
+  }
+  .theme-card h3 { margin-top: 10px; font-size: 1.12rem; color: var(--navy-900); }
+  .theme-card p { margin: 10px 0 0; font-size: 0.92rem; color: var(--ink-soft); }
+
+  /* ---------- Programs ---------- */
+  .program-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border-radius: 18px; overflow: hidden; border: 1px solid var(--border); }
+  .program-row {
+    background: #fff;
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 640px) { .program-row { grid-template-columns: 44px 1fr; padding: 22px; gap: 16px; } }
+  .program-row .idx {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--green-200);
+  }
+  .program-row h3 { font-size: 1.08rem; color: var(--navy-900); }
+  .program-row p { margin: 8px 0 0; color: var(--ink-soft); font-size: 0.95rem; max-width: 60ch; }
+
+  /* ---------- Where we work ---------- */
+  .where-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+  @media (max-width: 860px) { .where-grid { grid-template-columns: 1fr; } }
+  .corridor-list { display: flex; flex-direction: column; gap: 14px; }
+  .corridor {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .corridor .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green-600);
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+  .corridor h4 { font-size: 0.98rem; color: var(--navy-900); margin: 0; }
+  .corridor p { margin: 4px 0 0; font-size: 0.88rem; color: var(--ink-soft); }
+  .map-card {
+    background: linear-gradient(160deg, var(--navy-900), var(--navy-800));
+    border-radius: 20px;
+    padding: 36px;
+    color: #fff;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+  }
+  .map-card .founded {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .map-card .founded b { color: #fff; font-size: 2.4rem; display: block; margin-top: 4px; letter-spacing: 0; }
+
+  /* ---------- Platform CTA ---------- */
+  .platform-band {
+    border-radius: 24px;
+    background: linear-gradient(135deg, var(--green-600), var(--green-800));
+    color: #fff;
+    padding: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .platform-band h2 { font-size: 1.6rem; max-width: 30ch; }
+  .platform-band p { margin-top: 12px; color: rgba(255,255,255,0.86); max-width: 46ch; font-size: 0.98rem; }
+
+  /* ---------- Contact ---------- */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+  @media (max-width: 860px) { .contact-grid { grid-template-columns: 1fr; } }
+  .contact-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 30px;
+  }
+  .contact-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .contact-item:last-child { border-bottom: none; }
+  .contact-item .icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--green-50); color: var(--green-700);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .contact-item h4 { margin: 0; font-size: 0.92rem; color: var(--navy-900); }
+  .contact-item p { margin: 3px 0 0; font-size: 0.9rem; color: var(--ink-soft); }
+  .form-row { display: flex; flex-direction: column; gap: 16px; }
+  .form-row input, .form-row textarea, .form-row select {
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 13px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--cream-50);
+    color: var(--ink);
+  }
+  .form-row select { appearance: auto; }
+  .form-row input:focus, .form-row textarea:focus, .form-row select:focus {
+    outline: none;
+    border-color: var(--green-500);
+    box-shadow: 0 0 0 3px var(--green-50);
+  }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 520px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ---------- Footer ---------- */
+  footer { background: var(--navy-900); color: rgba(255,255,255,0.82); padding: 56px 0 28px; }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 32px;
+    padding-bottom: 36px;
+    border-bottom: 1px solid rgba(255,255,255,0.14);
+  }
+  @media (max-width: 780px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-grid h4 { color: #fff; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; }
+  .footer-grid a { display: block; text-decoration: none; color: rgba(255,255,255,0.72); font-size: 0.9rem; padding: 6px 0; }
+  .footer-grid a:hover { color: #fff; }
+  .footer-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; color: #fff; font-size: 1.15rem; margin-bottom: 14px; }
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 24px;
+    font-size: 0.82rem;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .socials { display: flex; gap: 10px; }
+  .socials a {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    text-decoration: none;
+  }
+  .socials a:hover { background: rgba(255,255,255,0.18); }
+
+  ::selection { background: var(--green-200); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a href="#top" class="brand">
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <path fill="#068241" d="M512.111 112.841c54.077 0 106.417 10.454 155.937 30.943 26.279 10.884 51.469 24.755 74.926 40.973l-4.995 2.562-64.289 32.222c-49.080-26.887-104.901-40.973-161.584-40.973h-2.608c-43.653 0.425-86.221 8.961-126.402 25.394-40.179 16.643-76.231 40.333-107.070 70.633-62.984 62.096-97.731 144.471-97.731 231.962 0 14.295 0.87 28.595 2.821 42.891l0.652 4.48 4.125-2.132 799.883-400.973v73.834l-947.781 475.020v-73.833l33.010-16.434c27.582-13.871 44.087-42.465 41.698-72.98-0.652-10.029-1.085-20.058-1.085-30.089 0-53.135 10.644-104.776 31.492-153.431 20.197-46.947 49.082-88.988 85.788-125.262 36.702-36.063 79.489-64.659 127.267-84.504 49.301-19.845 101.861-30.304 155.94-30.304z"/>
+        <path fill="#068241" d="M952.992 413.731l33.008-16.431v-73.834l-947.999 475.022v73.833l804.008-402.251 0.651 4.48c1.954 14.295 2.822 28.811 2.822 43.107 0 87.491-34.751 170.075-97.733 231.961-30.84 30.305-66.89 53.991-107.069 70.635-40.181 16.643-82.75 25.178-126.402 25.394h-2.39c-56.902 0-112.936-14.295-162.017-41.188l-2.608 1.279-66.457 33.291c23.456 16.218 48.648 30.089 75.145 41.188 49.52 20.485 101.86 30.943 155.937 30.943s106.639-10.453 155.94-30.943c47.563-19.845 90.564-48.226 127.268-84.503 36.701-36.279 65.587-78.316 85.788-125.264 20.848-48.652 31.492-100.297 31.492-153.431 0-10.029-0.218-20.273-1.084-30.302-2.39-30.514 14.115-59.112 41.699-72.983z"/>
+      </svg>
+      <span>SAPCONE<small>Community Empowerment</small></span>
+    </a>
+
+    <nav class="links">
+      <a href="#about">About</a>
+      <a href="#thematic-areas">Thematic Areas</a>
+      <a href="#programs">Programs</a>
+      <a href="#where-we-work">Where We Work</a>
+      <a href="#contact">Contact</a>
+    </nav>
+
+    <div class="nav-actions">
+      <a href="/app/" class="btn btn-ghost">Log In</a>
+      <a href="#request-access" class="btn btn-primary">Request Access</a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-panel" id="mobilePanel">
+    <a href="#about">About</a>
+    <a href="#thematic-areas">Thematic Areas</a>
+    <a href="#programs">Programs</a>
+    <a href="#where-we-work">Where We Work</a>
+    <a href="#contact">Contact</a>
+    <a href="/app/" style="color: var(--green-700); font-weight: 700;">Log In →</a>
+    <a href="#request-access" style="color: var(--green-700); font-weight: 700;">Request Access →</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Since 2006 · Northern Kenya &amp; Southern Ethiopia</span>
+        <h1>Building <span>thriving, resilient</span> communities that are just and peaceful.</h1>
+        <p class="lead">
+          SAPCONE (Sustainable Approaches for Community Empowerment) partners with nomadic
+          pastoralist communities to advance self-reliance, resilience, and sustainable
+          development — grounded in integrity, professionalism, and a people-centered approach.
+        </p>
+        <div class="hero-ctas">
+          <a href="#programs" class="btn btn-primary">Explore Our Programs</a>
+          <a href="#about" class="btn btn-ghost">Our Mission →</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><b>6</b><span>Thematic focus areas</span></div>
+          <div class="stat"><b>4</b><span>Countries reached</span></div>
+          <div class="stat"><b>19+</b><span>Years in the field</span></div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div>
+          <div class="quote-mark">&ldquo;</div>
+          <blockquote>Thriving and resilient communities that are just and peaceful.</blockquote>
+          <span class="footer-note">— SAPCONE Vision Statement</span>
+        </div>
+        <div class="map-list">
+          <span class="pill">Turkana County</span>
+          <span class="pill">Kakuma</span>
+          <span class="pill">South Sudan Corridor</span>
+          <span class="pill">Uganda Corridor</span>
+          <span class="pill">Southern Ethiopia</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT / VALUES -->
+  <section id="about">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">About Us</span>
+        <h2>A people-centered approach to lasting change</h2>
+        <p>
+          We work alongside communities — not for them — to build the capacity, systems, and
+          local leadership needed for durable, self-directed development in some of the most
+          under-resourced corridors of the Horn of Africa.
+        </p>
+      </div>
+      <div class="values-grid">
+        <div class="value-card">
+          <div class="icon">✓</div>
+          <h3>Integrity</h3>
+          <p>We hold ourselves accountable to the communities we serve and the partners who trust us.</p>
+        </div>
+        <div class="value-card">
+          <div class="icon">◆</div>
+          <h3>Professionalism</h3>
+          <p>Rigorous, evidence-based programming delivered to the highest operational standard.</p>
+        </div>
+        <div class="value-card">
+          <div class="icon">◈</div>
+          <h3>Transparency</h3>
+          <p>Open reporting and clear communication with donors, partners, and local leadership.</p>
+        </div>
+        <div class="value-card">
+          <div class="icon">●</div>
+          <h3>People-Centered</h3>
+          <p>Programs are designed with, not for, the pastoralist communities we partner with.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THEMATIC AREAS -->
+  <section id="thematic-areas" class="section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">What We Do</span>
+        <h2>Six thematic areas, one integrated approach</h2>
+        <p>Every program traces back to one of these focus areas, designed to reinforce each other on the ground.</p>
+      </div>
+      <div class="theme-grid">
+        <div class="theme-card">
+          <div class="num">01</div>
+          <h3>Peace &amp; Security</h3>
+          <p>Conflict mitigation and cross-border peacebuilding among pastoralist communities.</p>
+        </div>
+        <div class="theme-card">
+          <div class="num">02</div>
+          <h3>Governance</h3>
+          <p>Strengthening local institutions, democratic participation, and accountable leadership.</p>
+        </div>
+        <div class="theme-card">
+          <div class="num">03</div>
+          <h3>Health &amp; Nutrition</h3>
+          <p>Improving access to essential health services and combating malnutrition in remote areas.</p>
+        </div>
+        <div class="theme-card">
+          <div class="num">04</div>
+          <h3>Humanitarian Assistance</h3>
+          <p>Rapid, dignified response to drought, displacement, and other emergencies.</p>
+        </div>
+        <div class="theme-card">
+          <div class="num">05</div>
+          <h3>Education &amp; Protection</h3>
+          <p>Expanding access to schooling and safeguarding children and vulnerable groups.</p>
+        </div>
+        <div class="theme-card">
+          <div class="num">06</div>
+          <h3>WASH</h3>
+          <p>Sustainable water, sanitation, and hygiene infrastructure for underserved communities.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROGRAMS -->
+  <section id="programs">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Programs</span>
+        <h2>Major initiatives driving the work forward</h2>
+        <p>Four flagship program areas translate our thematic priorities into action on the ground.</p>
+      </div>
+      <div class="program-list">
+        <div class="program-row">
+          <div class="idx">01</div>
+          <div>
+            <h3>Sustainable Livelihoods</h3>
+            <p>Diversifying income sources for pastoralist households through skills-building, market access, and financial inclusion — including digital and mobile-based disbursement channels.</p>
+          </div>
+        </div>
+        <div class="program-row">
+          <div class="idx">02</div>
+          <div>
+            <h3>Climate Adaptation</h3>
+            <p>Helping communities respond to drought and shifting rainfall patterns through resilient natural resource management and early warning systems.</p>
+          </div>
+        </div>
+        <div class="program-row">
+          <div class="idx">03</div>
+          <div>
+            <h3>Gender Equity</h3>
+            <p>Expanding women's economic participation and leadership within traditionally patriarchal pastoralist structures.</p>
+          </div>
+        </div>
+        <div class="program-row">
+          <div class="idx">04</div>
+          <div>
+            <h3>Democratic Governance</h3>
+            <p>Building the civic capacity of local institutions to represent and respond to community needs.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHERE WE WORK -->
+  <section id="where-we-work" class="section-alt">
+    <div class="wrap where-grid">
+      <div>
+        <span class="eyebrow">Where We Work</span>
+        <h2 style="font-size: clamp(1.7rem, 3vw, 2.3rem); color: var(--navy-900); margin-bottom: 14px;">
+          Serving the hardest-to-reach corridors
+        </h2>
+        <p style="color: var(--ink-soft); margin-bottom: 28px;">
+          From the mobile-money ecosystems of Turkana County to the cross-border routes into
+          Uganda, South Sudan, and Ethiopia, our programs meet communities where conventional
+          financial and humanitarian infrastructure often can't.
+        </p>
+        <div class="corridor-list">
+          <div class="corridor">
+            <span class="dot"></span>
+            <div>
+              <h4>Turkana County &amp; Kakuma, Kenya</h4>
+              <p>Our home base — a strong mobile-money ecosystem constrained by phone ownership rates and remoteness.</p>
+            </div>
+          </div>
+          <div class="corridor">
+            <span class="dot"></span>
+            <div>
+              <h4>South Sudan Corridor</h4>
+              <p>Cross-border humanitarian and livelihoods support in a conflict-affected region.</p>
+            </div>
+          </div>
+          <div class="corridor">
+            <span class="dot"></span>
+            <div>
+              <h4>Uganda Corridor</h4>
+              <p>Supporting pastoralist communities that move across the Kenya–Uganda border.</p>
+            </div>
+          </div>
+          <div class="corridor">
+            <span class="dot"></span>
+            <div>
+              <h4>Southern Ethiopia</h4>
+              <p>Extending programs to nomadic communities across the northern frontier.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="map-card">
+        <div class="founded">Operating since<b>2006</b></div>
+        <p style="opacity:0.85; font-size:0.95rem;">
+          Nearly two decades of continuous partnership with nomadic pastoralist communities
+          across one of the most challenging operating environments in the region.
+        </p>
+        <div class="map-list">
+          <span class="pill">Kenya</span>
+          <span class="pill">Uganda</span>
+          <span class="pill">South Sudan</span>
+          <span class="pill">Ethiopia</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLATFORM CTA -->
+  <section>
+    <div class="wrap">
+      <div class="platform-band">
+        <div>
+          <h2>Digitizing disbursements for the last mile.</h2>
+          <p>
+            SAPCONE's DisburseFlow Studio brings transparent, auditable bulk payouts to
+            communities historically served by cash-only, high-risk delivery.
+          </p>
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <a href="/app/" class="btn btn-light">Log In to Platform</a>
+          <a href="#request-access" class="btn btn-ghost" style="border-color: rgba(255,255,255,0.4); color: #fff;">Request Access</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REQUEST ACCESS -->
+  <section id="request-access" class="section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">DisburseFlow Studio</span>
+        <h2>Request platform access</h2>
+        <p>
+          Accounts on DisburseFlow Studio are provisioned by an existing Owner or Financial
+          Controller — there's no public self-signup. Tell us who you are and we'll get an
+          account set up for you.
+        </p>
+      </div>
+      <div class="contact-grid">
+        <div class="contact-card">
+          <div class="contact-item">
+            <div class="icon">1</div>
+            <div>
+              <h4>Tell us about your role</h4>
+              <p>Submit the form with your organization and intended role.</p>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="icon">2</div>
+            <div>
+              <h4>We verify &amp; provision</h4>
+              <p>An Owner or Financial Controller creates your account with the right permissions.</p>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="icon">3</div>
+            <div>
+              <h4>You receive login details</h4>
+              <p>Once provisioned, log in at the link above with your email and temporary password.</p>
+            </div>
+          </div>
+        </div>
+        <form class="contact-card form-row" onsubmit="event.preventDefault(); this.querySelector('.submitted').style.display='block';">
+          <div class="two-col">
+            <input type="text" placeholder="Full name" required />
+            <input type="email" placeholder="Work email" required />
+          </div>
+          <input type="text" placeholder="Organization" required />
+          <select required>
+            <option value="" selected disabled>Requested role</option>
+            <option>Owner</option>
+            <option>Financial Controller</option>
+            <option>Approver</option>
+            <option>Uploader / Initiator</option>
+            <option>Finance Officer</option>
+            <option>Developer (read-only / config)</option>
+            <option>Business (read-only)</option>
+          </select>
+          <textarea rows="3" placeholder="Anything else we should know? (optional)"></textarea>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Request</button>
+          <p class="submitted" style="display:none; color: var(--green-700); font-size: 0.88rem; margin: 0;">
+            Thanks — this is a demo form and isn't wired to a backend yet. In production this
+            would notify an Owner to provision your account.
+          </p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Get In Touch</span>
+        <h2>Partner with us</h2>
+        <p>Whether you're a donor, implementing partner, or community stakeholder, we'd love to hear from you.</p>
+      </div>
+      <div class="contact-grid">
+        <div class="contact-card">
+          <div class="contact-item">
+            <div class="icon">☎</div>
+            <div>
+              <h4>Phone</h4>
+              <p>+254 720 557 266</p>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="icon">✉</div>
+            <div>
+              <h4>Email</h4>
+              <p>info@sapcone.org</p>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="icon">◎</div>
+            <div>
+              <h4>Location</h4>
+              <p>Lodwar, Turkana County, Kenya</p>
+            </div>
+          </div>
+        </div>
+        <form class="contact-card form-row" onsubmit="event.preventDefault(); this.querySelector('.submitted').style.display='block';">
+          <div class="two-col">
+            <input type="text" placeholder="Full name" required />
+            <input type="email" placeholder="Email address" required />
+          </div>
+          <input type="text" placeholder="Organization (optional)" />
+          <textarea rows="4" placeholder="How would you like to partner with SAPCONE?" required></textarea>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message</button>
+          <p class="submitted" style="display:none; color: var(--green-700); font-size: 0.88rem; margin: 0;">
+            Thanks — this is a demo form and isn't wired to a backend yet.
+          </p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <svg viewBox="0 0 1024 1024" width="26" height="26" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <path fill="#ffffff" d="M512.111 112.841c54.077 0 106.417 10.454 155.937 30.943 26.279 10.884 51.469 24.755 74.926 40.973l-4.995 2.562-64.289 32.222c-49.080-26.887-104.901-40.973-161.584-40.973h-2.608c-43.653 0.425-86.221 8.961-126.402 25.394-40.179 16.643-76.231 40.333-107.070 70.633-62.984 62.096-97.731 144.471-97.731 231.962 0 14.295 0.87 28.595 2.821 42.891l0.652 4.48 4.125-2.132 799.883-400.973v73.834l-947.781 475.020v-73.833l33.010-16.434c27.582-13.871 44.087-42.465 41.698-72.98-0.652-10.029-1.085-20.058-1.085-30.089 0-53.135 10.644-104.776 31.492-153.431 20.197-46.947 49.082-88.988 85.788-125.262 36.702-36.063 79.489-64.659 127.267-84.504 49.301-19.845 101.861-30.304 155.94-30.304z"/>
+            <path fill="#ffffff" d="M952.992 413.731l33.008-16.431v-73.834l-947.999 475.022v73.833l804.008-402.251 0.651 4.48c1.954 14.295 2.822 28.811 2.822 43.107 0 87.491-34.751 170.075-97.733 231.961-30.84 30.305-66.89 53.991-107.069 70.635-40.181 16.643-82.75 25.178-126.402 25.394h-2.39c-56.902 0-112.936-14.295-162.017-41.188l-2.608 1.279-66.457 33.291c23.456 16.218 48.648 30.089 75.145 41.188 49.52 20.485 101.86 30.943 155.937 30.943s106.639-10.453 155.94-30.943c47.563-19.845 90.564-48.226 127.268-84.503 36.701-36.279 65.587-78.316 85.788-125.264 20.848-48.652 31.492-100.297 31.492-153.431 0-10.029-0.218-20.273-1.084-30.302-2.39-30.514 14.115-59.112 41.699-72.983z"/>
+          </svg>
+          SAPCONE
+        </div>
+        <p style="font-size: 0.88rem; max-width: 32ch; color: rgba(255,255,255,0.68);">
+          Sustainable Approaches for Community Empowerment — building resilient, self-reliant
+          pastoralist communities since 2006.
+        </p>
+      </div>
+      <div>
+        <h4>Organization</h4>
+        <a href="#about">About Us</a>
+        <a href="#thematic-areas">Thematic Areas</a>
+        <a href="#programs">Programs</a>
+      </div>
+      <div>
+        <h4>Work</h4>
+        <a href="#where-we-work">Where We Work</a>
+        <a href="#contact">Impact Stories</a>
+        <a href="#contact">Publications</a>
+      </div>
+      <div>
+        <h4>Connect</h4>
+        <a href="#contact">Contact Us</a>
+        <a href="#contact">Careers</a>
+        <a href="#contact">Partner With Us</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span id="year"></span> SAPCONE. All rights reserved.</span>
+      <div class="socials">
+        <a href="#" aria-label="Facebook">f</a>
+        <a href="#" aria-label="Twitter">𝕏</a>
+        <a href="#" aria-label="YouTube">▶</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+  const toggle = document.getElementById('menuToggle');
+  const panel = document.getElementById('mobilePanel');
+  toggle.addEventListener('click', () => panel.classList.toggle('open'));
+  panel.querySelectorAll('a').forEach(a => a.addEventListener('click', () => panel.classList.remove('open')));
+</script>
+
+</body>
+</html>
