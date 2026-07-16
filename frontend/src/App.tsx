@@ -8,7 +8,9 @@ interface Recipient {
   id: string; // id - SAPCONE's own identifier for participant
   amount: string; // payments.amount - Value to be paid
   verification: string; // verification - Date of birth (DOB) checked during SEP-24
-  paymentID: string; // paymentID - SAPCONE-side reference for reconciliation
+  paymentID: string; // paymentID - optional SAPCONE-side reference for reconciliation
+  recipientName?: string; // RecipientName - optional, passed through to the backend as-is
+  currencyType?: string; // Currency type - optional, passed through to the backend as-is
   errors: {
     phone?: string;
     id?: string;
@@ -78,6 +80,16 @@ interface DisbursementHistoryItem {
   total_amount: string;
   total_payments: number;
   asset?: { code: string };
+}
+
+// Read-only row shape for the recipient preview table shown on the Approvals,
+// Submissions, and History dashboards, sourced from `GET /payments?disbursement_id=`.
+interface PaymentPreviewItem {
+  id: string;
+  external_payment_id?: string;
+  amount: string;
+  status: string;
+  receiver_wallet?: { receiver?: { id: string }; wallet?: { name: string } };
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -303,6 +315,12 @@ const AppContent = () => {
 
   const [disbursementHistory, setDisbursementHistory] = useState<DisbursementHistoryItem[]>([]);
 
+  // Recipient preview (Approvals/Submissions/History): expand a disbursement row to see the
+  // same per-recipient table shown at upload time, fetched on demand and cached by id.
+  const [expandedPreviewId, setExpandedPreviewId] = useState<string | null>(null);
+  const [previewPayments, setPreviewPayments] = useState<Record<string, PaymentPreviewItem[]>>({});
+  const [isLoadingPreviewId, setIsLoadingPreviewId] = useState<string | null>(null);
+
   // Approvals Queue (role: approver/owner/financial_controller)
   const [approvalsQueue, setApprovalsQueue] = useState<DisbursementHistoryItem[]>([]);
   const [isLoadingApprovals, setIsLoadingApprovals] = useState(false);
@@ -434,10 +452,9 @@ const AppContent = () => {
       }
     }
 
-    // Validate Payment ID
-    if (!row.paymentID || row.paymentID.trim() === "") {
-      errors.paymentID = "Internal paymentID reference is required";
-    } else {
+    // Validate Payment ID — optional on the real backend (only length/uniqueness
+    // checked when present, see disbursement_instructions_validator.go).
+    if (row.paymentID && row.paymentID.trim() !== "") {
       const duplicate = allRows.filter((r) => r.paymentID === row.paymentID).length > 1;
       if (duplicate) {
         errors.paymentID = "Duplicate paymentID found";
@@ -492,6 +509,8 @@ const AppContent = () => {
           amount: row.amount || "",
           verification: row.verification || "",
           paymentID: row.paymentID || "",
+          recipientName: row.RecipientName || "",
+          currencyType: row["Currency type"] || "",
           errors: {},
         } as Recipient;
         rec.errors = validateRecipientRow(rec, rows as Partial<Recipient>[]);
@@ -591,6 +610,8 @@ const AppContent = () => {
 
   const hasErrors = recipients.some((r) => Object.keys(r.errors).length > 0);
   const totalPayout = recipients.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+  const hasRecipientNames = recipients.some((r) => r.recipientName);
+  const hasCurrencyTypes = recipients.some((r) => r.currencyType);
 
   const handleResetUpload = () => {
     setDisbursementId(null);
@@ -605,6 +626,27 @@ const AppContent = () => {
       handleLogout();
     } catch {
       showNotification("error", "Error clearing local storage.");
+    }
+  };
+
+  // Expands/collapses the recipient preview table under a disbursement row on the
+  // Approvals, Submissions, and History dashboards; fetches payments once per id and caches them.
+  const handleTogglePreview = async (id: string) => {
+    if (expandedPreviewId === id) {
+      setExpandedPreviewId(null);
+      return;
+    }
+    setExpandedPreviewId(id);
+    if (previewPayments[id]) return;
+    setIsLoadingPreviewId(id);
+    try {
+      const result = await fetchApi(`/payments?disbursement_id=${id}`);
+      setPreviewPayments((prev) => ({ ...prev, [id]: result.data || [] }));
+    } catch (err: any) {
+      showNotification("error", err.message || "Failed to load recipient preview.");
+      setExpandedPreviewId(null);
+    } finally {
+      setIsLoadingPreviewId(null);
     }
   };
 
@@ -761,6 +803,68 @@ const AppContent = () => {
     } catch (err: any) {
       showNotification("error", err.message || "Failed to update user activation.");
     }
+  };
+
+  // Read-only recipient preview table shared by the Approvals, Submissions, and History
+  // dashboards — mirrors the upload-time preview table but without the editable inputs.
+  const renderPaymentPreview = (id: string) => {
+    if (isLoadingPreviewId === id) {
+      return <div className="text-center py-6 text-slate-400 text-xs font-medium">Loading recipients…</div>;
+    }
+    const payments = previewPayments[id] || [];
+    if (payments.length === 0) {
+      return (
+        <div className="text-center py-6 text-slate-400 text-xs font-medium">
+          No recipient payments found for this disbursement.
+        </div>
+      );
+    }
+    return (
+      <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white mt-3">
+        <table className="w-full border-collapse text-left text-sm text-slate-700">
+          <thead>
+            <tr>
+              <th className="bg-slate-50 text-slate-600 font-semibold py-2.5 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
+                paymentID
+              </th>
+              <th className="bg-slate-50 text-slate-600 font-semibold py-2.5 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
+                Receiver
+              </th>
+              <th className="bg-slate-50 text-slate-600 font-semibold py-2.5 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
+                Wallet
+              </th>
+              <th className="bg-slate-50 text-slate-600 font-semibold py-2.5 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
+                Amount
+              </th>
+              <th className="bg-slate-50 text-slate-600 font-semibold py-2.5 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
+                Status
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {payments.map((p) => (
+              <tr key={p.id} className="hover:bg-slate-50/50 transition-colors duration-150">
+                <td className="py-2.5 px-4 border-b border-slate-200 align-middle text-slate-700">
+                  {p.external_payment_id || "—"}
+                </td>
+                <td className="py-2.5 px-4 border-b border-slate-200 align-middle text-slate-700">
+                  {p.receiver_wallet?.receiver?.id || "—"}
+                </td>
+                <td className="py-2.5 px-4 border-b border-slate-200 align-middle text-slate-700">
+                  {p.receiver_wallet?.wallet?.name || "—"}
+                </td>
+                <td className="py-2.5 px-4 border-b border-slate-200 align-middle text-slate-700">
+                  {parseFloat(p.amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </td>
+                <td className="py-2.5 px-4 border-b border-slate-200 align-middle text-slate-700">
+                  {p.status}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   // View-change data loading
@@ -1100,7 +1204,8 @@ const AppContent = () => {
                       : "Click to select and upload a beneficiary CSV"}
                 </div>
                 <div className="text-xs text-slate-400">
-                  Required Schema: phone, id, amount, verification, paymentID
+                  Required columns: phone, id, amount, verification. Optional: paymentID,
+                  RecipientName, Currency type, email, walletAddress, walletAddressMemo.
                 </div>
                 </div>
               </div>
@@ -1136,8 +1241,13 @@ const AppContent = () => {
                   <table className="w-full border-collapse text-left text-sm text-slate-700">
                     <thead>
                       <tr>
+                        {hasRecipientNames && (
+                          <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
+                            Recipient Name
+                          </th>
+                        )}
                         <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
-                          paymentID
+                          paymentID (optional)
                         </th>
                         <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
                           phone (receivers.phone)
@@ -1148,6 +1258,11 @@ const AppContent = () => {
                         <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
                           amount ({assetType})
                         </th>
+                        {hasCurrencyTypes && (
+                          <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
+                            Currency
+                          </th>
+                        )}
                         <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
                           verification (DOB)
                         </th>
@@ -1162,6 +1277,11 @@ const AppContent = () => {
                           key={index}
                           className={`hover:bg-slate-50/50 transition-colors duration-150 ${Object.keys(rec.errors).length > 0 ? "bg-red-50/50 hover:bg-red-50" : ""}`}
                         >
+                          {hasRecipientNames && (
+                            <td className="py-3.5 px-4 border-b border-slate-200 align-middle text-slate-700">
+                              {rec.recipientName || "—"}
+                            </td>
+                          )}
                           <td className="py-3.5 px-4 border-b border-slate-200 align-middle">
                             <input
                               type="text"
@@ -1214,6 +1334,11 @@ const AppContent = () => {
                               </span>
                             )}
                           </td>
+                          {hasCurrencyTypes && (
+                            <td className="py-3.5 px-4 border-b border-slate-200 align-middle text-slate-700">
+                              {rec.currencyType || "—"}
+                            </td>
+                          )}
                           <td className="py-3.5 px-4 border-b border-slate-200 align-middle">
                             <input
                               type="text"
@@ -1299,35 +1424,44 @@ const AppContent = () => {
                 {approvalsQueue.map((item) => (
                   <div
                     key={item.id}
-                    className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-slate-50 border border-slate-200 p-5 rounded-xl"
+                    className="bg-slate-50 border border-slate-200 p-5 rounded-xl"
                   >
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
-                      <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center flex-wrap">
-                        <span>ID: {item.id}</span>
-                        <span>•</span>
-                        <span>{new Date(item.created_at).toLocaleString()}</span>
-                        <span>•</span>
-                        <span className="text-emerald-600 font-semibold">
-                          {item.total_payments} Payouts ({item.asset?.code})
-                        </span>
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
+                        <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center flex-wrap">
+                          <span>ID: {item.id}</span>
+                          <span>•</span>
+                          <span>{new Date(item.created_at).toLocaleString()}</span>
+                          <span>•</span>
+                          <span className="text-emerald-600 font-semibold">
+                            {item.total_payments} Payouts ({item.asset?.code})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="font-extrabold text-sm text-emerald-600">
+                          $
+                          {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}{" "}
+                          {item.asset?.code}
+                        </div>
+                        <button
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2 px-3 rounded-lg border border-slate-200 transition-all text-xs"
+                          onClick={() => handleTogglePreview(item.id)}
+                        >
+                          {expandedPreviewId === item.id ? "Hide Preview" : "Preview"}
+                        </button>
+                        <button
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all text-xs"
+                          onClick={() => handleApproveRow(item.id)}
+                        >
+                          Approve
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="font-extrabold text-sm text-emerald-600">
-                        $
-                        {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}{" "}
-                        {item.asset?.code}
-                      </div>
-                      <button
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all text-xs"
-                        onClick={() => handleApproveRow(item.id)}
-                      >
-                        Approve
-                      </button>
-                    </div>
+                    {expandedPreviewId === item.id && renderPaymentPreview(item.id)}
                   </div>
                 ))}
               </div>
@@ -1386,6 +1520,12 @@ const AppContent = () => {
                           {item.asset?.code}
                         </div>
                         <button
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2 px-3 rounded-lg border border-slate-200 transition-all text-xs"
+                          onClick={() => handleTogglePreview(item.id)}
+                        >
+                          {expandedPreviewId === item.id ? "Hide Preview" : "Preview"}
+                        </button>
+                        <button
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-xs"
                           disabled={submittingId === item.id}
                           onClick={() => handleSubmitRow(item.id)}
@@ -1394,6 +1534,8 @@ const AppContent = () => {
                         </button>
                       </div>
                     </div>
+
+                    {expandedPreviewId === item.id && renderPaymentPreview(item.id)}
 
                     {submittingId === item.id && (
                       <div className="mt-4 p-4 bg-slate-900 border border-slate-800 rounded-xl font-mono text-xs text-emerald-400 max-h-[200px] overflow-y-auto shadow-inner">
@@ -1456,33 +1598,42 @@ const AppContent = () => {
               ) : (
                 disbursementHistory.map((item) => (
                   <div
-                    className="flex justify-between items-center bg-slate-50 border border-slate-200 p-5 rounded-xl hover:shadow-md transition-all duration-200"
+                    className="bg-slate-50 border border-slate-200 p-5 rounded-xl hover:shadow-md transition-all duration-200"
                     key={item.id}
                   >
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
-                      <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center">
-                        <span>ID: {item.id}</span>
-                        <span>•</span>
-                        <span>{new Date(item.created_at).toLocaleString()}</span>
-                        <span>•</span>
-                        <span className="text-emerald-600 font-semibold">
-                          {item.total_payments} Payouts ({item.asset?.code})
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
+                        <div className="text-xs text-slate-500 mt-1 flex gap-3 items-center">
+                          <span>ID: {item.id}</span>
+                          <span>•</span>
+                          <span>{new Date(item.created_at).toLocaleString()}</span>
+                          <span>•</span>
+                          <span className="text-emerald-600 font-semibold">
+                            {item.total_payments} Payouts ({item.asset?.code})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="font-extrabold text-sm text-emerald-600">
+                          $
+                          {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}{" "}
+                          {item.asset?.code}
+                        </div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase">
+                          {item.status}
                         </span>
+                        <button
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2 px-3 rounded-lg border border-slate-200 transition-all text-xs"
+                          onClick={() => handleTogglePreview(item.id)}
+                        >
+                          {expandedPreviewId === item.id ? "Hide Preview" : "Preview"}
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="font-extrabold text-sm text-emerald-600">
-                        $
-                        {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}{" "}
-                        {item.asset?.code}
-                      </div>
-                      <span className="text-xs font-semibold text-slate-500 uppercase">
-                        {item.status}
-                      </span>
-                    </div>
+                    {expandedPreviewId === item.id && renderPaymentPreview(item.id)}
                   </div>
                 ))
               )}
