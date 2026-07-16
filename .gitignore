@@ -33,3 +33,4 @@ dev/certs/
 # Rust & Soroban
 target/
 test_snapshots/
+sdp-bin
