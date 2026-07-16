@@ -505,10 +505,9 @@ const AppContent = () => {
       }
     }
 
-    // Validate Payment ID
-    if (!row.paymentID || row.paymentID.trim() === "") {
-      errors.paymentID = "Internal paymentID reference is required";
-    } else {
+    // Validate Payment ID — optional on the real backend (only length/uniqueness
+    // checked when present, see disbursement_instructions_validator.go).
+    if (row.paymentID && row.paymentID.trim() !== "") {
       const duplicate = allRows.filter((r) => r.paymentID === row.paymentID).length > 1;
       if (duplicate) {
         errors.paymentID = "Duplicate paymentID found";
