@@ -427,6 +427,7 @@ func Test_ExportHandler_ExportReceivers(t *testing.T) {
 
 				expectedHeaders := []string{
 					"ID", "Email", "PhoneNumber", "ExternalID", "CreatedAt", "UpdatedAt",
+					"RecipientName", "CurrencyType",
 					"TotalPayments", "SuccessfulPayments", "FailedPayments", "CanceledPayments",
 					"RemainingPayments", "RegisteredWallets", "ReceivedAmounts",
 				}
