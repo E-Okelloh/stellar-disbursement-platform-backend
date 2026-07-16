@@ -639,6 +639,64 @@ func GetPaymentsByDisbursementID(t *testing.T, ctx context.Context, sqlExec db.S
 	return payments
 }
 
+func Test_DisbursementInstructionModel_createReceiverFromInstructionIfNeeded_RecipientNameAndCurrencyType(t *testing.T) {
+	dbt := dbtest.Open(t)
+	defer dbt.Close()
+
+	ctx := context.Background()
+	dbConnectionPool, outerErr := db.OpenDBConnectionPool(dbt.DSN)
+	require.NoError(t, outerErr)
+	defer dbConnectionPool.Close()
+
+	di := NewDisbursementInstructionModel(dbConnectionPool)
+
+	t.Run("wires RecipientName and CurrencyType from the instruction through to the created receiver", func(t *testing.T) {
+		defer DeleteAllReceiversFixtures(t, ctx, dbConnectionPool)
+
+		instruction := &DisbursementInstruction{
+			Phone:             "+14152223335",
+			ID:                "ext-id-3",
+			Amount:            "50.00",
+			VerificationValue: "1990-01-01",
+			RecipientName:     "John Smith",
+			CurrencyType:      "EUR",
+		}
+
+		err := db.RunInTransaction(ctx, dbConnectionPool, nil, func(dbTx db.DBTransaction) error {
+			return di.createReceiverFromInstructionIfNeeded(ctx, dbTx, instruction, map[string]*Receiver{})
+		})
+		require.NoError(t, err)
+
+		receivers, err := (&ReceiverModel{}).GetByContacts(ctx, dbConnectionPool, instruction.Phone)
+		require.NoError(t, err)
+		require.Len(t, receivers, 1)
+		assert.Equal(t, "John Smith", receivers[0].RecipientName)
+		assert.Equal(t, "EUR", receivers[0].CurrencyType)
+	})
+
+	t.Run("leaves RecipientName and CurrencyType empty when the instruction doesn't set them", func(t *testing.T) {
+		defer DeleteAllReceiversFixtures(t, ctx, dbConnectionPool)
+
+		instruction := &DisbursementInstruction{
+			Phone:             "+14152223336",
+			ID:                "ext-id-4",
+			Amount:            "50.00",
+			VerificationValue: "1990-01-01",
+		}
+
+		err := db.RunInTransaction(ctx, dbConnectionPool, nil, func(dbTx db.DBTransaction) error {
+			return di.createReceiverFromInstructionIfNeeded(ctx, dbTx, instruction, map[string]*Receiver{})
+		})
+		require.NoError(t, err)
+
+		receivers, err := (&ReceiverModel{}).GetByContacts(ctx, dbConnectionPool, instruction.Phone)
+		require.NoError(t, err)
+		require.Len(t, receivers, 1)
+		assert.Empty(t, receivers[0].RecipientName)
+		assert.Empty(t, receivers[0].CurrencyType)
+	})
+}
+
 func GetExternalPaymentIDsByDisbursementID(t *testing.T, ctx context.Context, sqlExec db.SQLExecuter, disbursementID string) []string {
 	query := `
 	SELECT

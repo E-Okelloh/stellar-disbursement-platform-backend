@@ -34,6 +34,9 @@ func (qv *PaymentQueryValidator) ValidateAndGetPaymentFilters(filters map[data.F
 	if filters[data.FilterKeyReceiverID] != nil {
 		validFilters[data.FilterKeyReceiverID] = filters[data.FilterKeyReceiverID]
 	}
+	if filters[data.FilterKeyDisbursementID] != nil {
+		validFilters[data.FilterKeyDisbursementID] = filters[data.FilterKeyDisbursementID]
+	}
 	if filters[data.FilterKeyPaymentType] != nil {
 		validFilters[data.FilterKeyPaymentType] = qv.validateAndGetPaymentType(filters[data.FilterKeyPaymentType].(string))
 	}

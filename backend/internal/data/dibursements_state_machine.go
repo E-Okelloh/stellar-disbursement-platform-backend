@@ -43,15 +43,15 @@ func (status DisbursementStatus) SourceStatuses() []DisbursementStatus {
 // DisbursementStateMachineWithInitialState returns a state machine for disbursements initialized with the given state
 func DisbursementStateMachineWithInitialState(initialState DisbursementStatus) *StateMachine {
 	transitions := []StateTransition{
-		{From: DraftDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},           // instructions uploaded successfully
-		{From: ReadyDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},           // user re-uploads instructions
-		{From: ReadyDisbursementStatus.State(), To: ApprovedDisbursementStatus.State()},        // approver approves disbursement
-		{From: ReadyDisbursementStatus.State(), To: StartedDisbursementStatus.State()},         // start disbursement (when approval not required)
-		{From: ApprovedDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},        // approver rejects, back to ready
-		{From: ApprovedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},      // finance officer submits to Stellar
-		{From: StartedDisbursementStatus.State(), To: PausedDisbursementStatus.State()},        // user pauses disbursement
-		{From: PausedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},        // user resumes disbursement
-		{From: StartedDisbursementStatus.State(), To: CompletedDisbursementStatus.State()},     // all payments went through
+		{From: DraftDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},       // instructions uploaded successfully
+		{From: ReadyDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},       // user re-uploads instructions
+		{From: ReadyDisbursementStatus.State(), To: ApprovedDisbursementStatus.State()},    // approver approves disbursement
+		{From: ReadyDisbursementStatus.State(), To: StartedDisbursementStatus.State()},     // start disbursement (when approval not required)
+		{From: ApprovedDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},    // approver rejects, back to ready
+		{From: ApprovedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},  // finance officer submits to Stellar
+		{From: StartedDisbursementStatus.State(), To: PausedDisbursementStatus.State()},    // user pauses disbursement
+		{From: PausedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},    // user resumes disbursement
+		{From: StartedDisbursementStatus.State(), To: CompletedDisbursementStatus.State()}, // all payments went through
 	}
 
 	return NewStateMachine(initialState.State(), transitions)

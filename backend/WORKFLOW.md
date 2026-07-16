@@ -198,3 +198,75 @@ go test ./internal/services/... -run "DisbursementManagementService"
 2. **Role-Based Access**: Each step requires specific role permissions
 3. **Status Validation**: State machine enforces valid transitions only
 4. **Audit Trail**: All status changes recorded in `status_history` with user IDs
+
+## Review Findings & Fixes (pre-merge to `Sapcone`)
+
+The initial implementation (commit `cb5ea7e`) was reviewed against the base SDP before merging.
+Five issues were found and fixed on this branch.
+
+### 1. Approval step was bypassable via the legacy status endpoint (correctness/security)
+The legacy `PATCH /disbursements/{id}/status` endpoint (still routed, still granted to the
+`Approver` role) called `StartDisbursement()`, which allowed `READY → STARTED` directly and only
+checked that the starter wasn't the creator — it never checked that the disbursement had actually
+passed through `APPROVED`. With `is_approval_required = true`, an `Approver` could skip the
+`FinanceOfficer` step entirely by hitting the old endpoint instead of the new
+`/approve` + `/submit` pair, defeating the separation-of-duties goal of this feature.
+
+This is a deliberate behavior change, decided during review: `is_approval_required = true` now
+means the full 3-step flow (matching what this document already described), superseding the
+older "any second user can directly start" semantics. Orgs relying on the old 2-role behavior are
+expected to use the new `Uploader`/`Approver`/`FinanceOfficer` roles going forward.
+
+**Fix**: `StartDisbursement()` (`internal/services/disbursement_management_service.go`) now
+rejects the transition with a new `ErrDisbursementRequiresApprovalStep` (`400`) unless the
+disbursement is already in `APPROVED` status, whenever `organization.IsApprovalRequired` is true.
+The direct `READY → STARTED` path remains available only when the approval workflow is disabled.
+
+### 2. Approval step was *also* bypassable via `SubmitDisbursement` itself
+`SubmitDisbursement()` only checked `disbursement.Status.TransitionTo(StartedDisbursementStatus)`,
+but `READY → STARTED` is *also* a generically valid state-machine transition (kept for the
+non-approval path). This meant a `FinanceOfficer` could call `PATCH /disbursements/{id}/submit`
+directly on a `READY` disbursement — one that had never been approved — and it would proceed
+straight to `STARTED`. Caught by a new regression test
+(`Test_DisbursementManagementService_SubmitDisbursement/returns_an_error_if_the_disbursement_status_is_not_APPROVED`),
+which originally panicked instead of failing cleanly.
+
+**Fix**: `SubmitDisbursement()` now explicitly requires `disbursement.Status == ApprovedDisbursementStatus`
+before proceeding, instead of relying solely on the generic transition check.
+
+### 3. `FinanceOfficer` couldn't view disbursements
+`GetBusinessOperationRoles()` (`internal/data/roles.go`), which gates `GET /disbursements`,
+`GET /disbursements/{id}`, `/receivers`, and `/instructions`, had `UploaderUserRole` added but not
+`FinanceOfficerUserRole`. A finance-officer-only user could not see the disbursement they were
+about to submit.
+
+**Fix**: Added `FinanceOfficerUserRole` to `GetBusinessOperationRoles()`.
+
+### 4. Formatting regression in `roles.go`
+The original commit reformatted the whole file from tabs to spaces, dropped several existing doc
+comments (`GetAllRoles`, `GetBusinessOperationRoles`, `FromUserRoleArrayToStringArray`,
+`ValidateRoleMutualExclusivity`), and left the file without a trailing newline — inconsistent with
+`gofmt` and the rest of the codebase.
+
+**Fix**: Restored standard `gofmt` formatting and the original doc comments.
+
+### 5. Missing test coverage
+Despite the commit message claiming "comprehensive tests for state machine, handlers, and service
+layer," `ApproveDisbursement()` and `SubmitDisbursement()` had zero tests, and the state-machine
+change wasn't reflected in the pre-existing `StartDisbursement` tests (which still asserted the old
+direct-start-under-approval behavior described in finding #1).
+
+**Fix**: Added `Test_DisbursementManagementService_ApproveDisbursement` and
+`Test_DisbursementManagementService_SubmitDisbursement` (service layer), a
+`Test_GetBusinessOperationRoles` test, extended `Test_UserRole_IsValid`/`Test_GetAllRoles` to cover
+the two new roles, and updated the pre-existing `StartDisbursement` service and handler tests to
+match the new APPROVED-first contract from finding #1.
+
+Two more pre-existing tests outside the original commit's diff (`Test_ListRoles`,
+`Test_CreateUserRequest_validate`/`Test_UserHandler_CreateUser`/`Test_UserHandler_UpdateUserRoles`
+in `user_handler_test.go`) hard-coded the full list of valid roles in string assertions and needed
+updating to include `uploader`/`finance_officer` — mechanical fixes, no behavior change.
+
+**Verification**: `gofmt -l` clean on all touched files; `go build ./...` succeeds; `go vet` clean;
+full `go test` (against a real Postgres instance) green on `internal/data`, `internal/services`,
+and `internal/serve/httphandler`.
