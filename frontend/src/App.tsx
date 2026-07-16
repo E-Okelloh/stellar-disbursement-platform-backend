@@ -120,6 +120,7 @@ const AppContent = () => {
 
   const [distBalance, setDistBalance] = useState<number>(0);
   const [xlmBalance, setXlmBalance] = useState<number>(0);
+  const [selectedVaultAsset, setSelectedVaultAsset] = useState<"USDC" | "XLM">("USDC");
 
   const [disbursementProgress, setDisbursementProgress] = useState<number>(0);
   const [progressLogs, setProgressLogs] = useState<string[]>([]);
@@ -537,17 +538,20 @@ const AppContent = () => {
                 : "Fetching address..."}
             </div>
           </div>
-          <div className="text-right text-xs">
-            <span className="text-slate-500 font-medium block">USDC Vault</span>
-            <span className="font-bold text-emerald-600 block">
-              {(distBalance * 129).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh
+          <div className="flex items-center gap-3 text-xs bg-white border border-slate-200 rounded-lg p-1.5 shadow-xs">
+            <span className={`font-bold block text-sm ${selectedVaultAsset === "USDC" ? "text-emerald-600" : "text-blue-600"}`}>
+              {selectedVaultAsset === "USDC"
+                ? `${(distBalance * 129).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh`
+                : `${(xlmBalance * 11.5).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh`}
             </span>
-          </div>
-          <div className="text-right text-xs">
-            <span className="text-slate-500 font-medium block">XLM Vault</span>
-            <span className="font-bold text-blue-600 block">
-              {(xlmBalance * 11.5).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh
-            </span>
+            <select
+              value={selectedVaultAsset}
+              onChange={(e) => setSelectedVaultAsset(e.target.value as "USDC" | "XLM")}
+              className="bg-slate-50 border border-slate-200 text-slate-700 rounded px-1.5 py-0.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="USDC">USDC</option>
+              <option value="XLM">XLM</option>
+            </select>
           </div>
         </div>
       </header>
