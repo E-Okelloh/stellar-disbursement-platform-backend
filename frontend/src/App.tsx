@@ -132,6 +132,17 @@ function formatApiError(errorBody: any, fallback: string): string {
   return base;
 }
 
+// Same conversion rates used for the distribution account balance in the header.
+const KSH_RATE: Record<string, number> = { USDC: 129, XLM: 11.5 };
+
+function formatKsh(amount: number | string, assetCode?: string): string | null {
+  const rate = assetCode ? KSH_RATE[assetCode] : undefined;
+  if (!rate) return null;
+  const value = typeof amount === "string" ? parseFloat(amount || "0") : amount;
+  if (!Number.isFinite(value)) return null;
+  return `${(value * rate).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh`;
+}
+
 // Auth endpoints are unauthenticated (no Bearer token yet) and need the Device-ID header.
 async function authApi(path: string, body: Record<string, unknown>) {
   const response = await fetch(`${API_URL}${path}`, {
@@ -233,7 +244,7 @@ function PaymentsExpandPanel({ isLoading, payments }: { isLoading: boolean; paym
               </span>
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-slate-700">
-                  {p.amount} {p.asset?.code}
+                  {formatKsh(p.amount, p.asset?.code) || `${p.amount} ${p.asset?.code}`}
                 </span>
                 <span
                   className={`font-semibold uppercase ${
@@ -280,8 +291,8 @@ const AppContent = () => {
   const canUpload = roles.some((r) => ["owner", "financial_controller", "initiator", "uploader"].includes(r));
   const canApprove = roles.some((r) => ["owner", "financial_controller", "approver"].includes(r));
   const canSubmit = roles.some((r) => ["owner", "financial_controller", "finance_officer"].includes(r));
-  // Balance is financial data - only roles that actually execute/oversee payments should see it.
-  const canViewBalance = roles.some((r) => ["owner", "financial_controller", "finance_officer"].includes(r));
+  // Balance is financial data - restricted to the Finance Officer role only.
+  const canViewBalance = roles.includes("finance_officer");
   const canManageUsers = roles.includes("owner");
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -866,54 +877,54 @@ const AppContent = () => {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl p-8 shadow-xs">
-          <h1 className="text-xl font-bold tracking-wider text-slate-900 mb-1">SAPCONE</h1>
-          <p className="text-sm text-slate-500 mb-6">Sign in to DisburseFlow Studio</p>
+        <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-10 shadow-xs">
+          <h1 className="text-4xl font-bold tracking-wider text-slate-900 mb-2">SAPCONE</h1>
+          <p className="text-lg text-slate-500 mb-8">Sign in to DisburseFlow Studio</p>
 
           {!mfaRequired ? (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-6">
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1">Email</label>
+                <label className="text-base font-semibold text-slate-700 block mb-2">Email</label>
                 <input
                   type="email"
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full bg-white border border-slate-300 text-slate-900 py-2 px-3 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full bg-white border border-slate-300 text-slate-900 py-3.5 px-4 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1">Password</label>
+                <label className="text-base font-semibold text-slate-700 block mb-2">Password</label>
                 <input
                   type="password"
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full bg-white border border-slate-300 text-slate-900 py-2 px-3 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full bg-white border border-slate-300 text-slate-900 py-3.5 px-4 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               {recaptchaEnabled && (
-                <p className="text-xs text-amber-600">
+                <p className="text-sm text-amber-600">
                   This backend has reCAPTCHA enabled; login may be rejected until the widget is
                   wired up.
                 </p>
               )}
-              {authError && <p className="text-xs text-red-600 font-medium">{authError}</p>}
+              {authError && <p className="text-sm text-red-600 font-medium">{authError}</p>}
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-sm"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-lg"
               >
                 {authLoading ? "Signing in..." : "Sign in"}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleMfaSubmit} className="space-y-4">
+            <form onSubmit={handleMfaSubmit} className="space-y-6">
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1">
+                <label className="text-base font-semibold text-slate-700 block mb-2">
                   MFA Code
                 </label>
-                <p className="text-xs text-slate-400 mb-2">
+                <p className="text-sm text-slate-500 mb-3">
                   Check your email for the verification code.
                 </p>
                 <input
@@ -921,14 +932,14 @@ const AppContent = () => {
                   required
                   value={mfaCode}
                   onChange={(e) => setMfaCode(e.target.value)}
-                  className="w-full bg-white border border-slate-300 text-slate-900 py-2 px-3 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full bg-white border border-slate-300 text-slate-900 py-3.5 px-4 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
-              {authError && <p className="text-xs text-red-600 font-medium">{authError}</p>}
+              {authError && <p className="text-sm text-red-600 font-medium">{authError}</p>}
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-sm"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-lg"
               >
                 {authLoading ? "Verifying..." : "Verify"}
               </button>
@@ -954,22 +965,24 @@ const AppContent = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center bg-slate-100 py-2.5 px-4 rounded-xl border border-slate-200">
-          <div className="text-xs">
-            <span className="text-slate-500 font-medium block">Distribution Account:</span>
-            <div
-              className="font-mono text-xs text-blue-600 cursor-pointer font-semibold hover:underline mt-0.5"
-              onClick={() => {
-                if (distPublicKey) {
-                  navigator.clipboard.writeText(distPublicKey);
-                  alert("Copied Stellar address!");
-                }
-              }}
-            >
-              {distPublicKey
-                ? `${distPublicKey.slice(0, 8)}...${distPublicKey.slice(-8)}`
-                : "Fetching address..."}
+          {canViewBalance && (
+            <div className="text-xs">
+              <span className="text-slate-500 font-medium block">Distribution Account:</span>
+              <div
+                className="font-mono text-xs text-blue-600 cursor-pointer font-semibold hover:underline mt-0.5"
+                onClick={() => {
+                  if (distPublicKey) {
+                    navigator.clipboard.writeText(distPublicKey);
+                    alert("Copied Stellar address!");
+                  }
+                }}
+              >
+                {distPublicKey
+                  ? `${distPublicKey.slice(0, 8)}...${distPublicKey.slice(-8)}`
+                  : "Fetching address..."}
+              </div>
             </div>
-          </div>
+          )}
           {canViewBalance && (
             <div className="flex items-center gap-3 text-xs bg-white border border-slate-200 rounded-lg p-1.5 shadow-xs">
               <span className={`font-bold block text-sm ${selectedVaultAsset === "USDC" ? "text-emerald-600" : "text-blue-600"}`}>
@@ -1204,8 +1217,7 @@ const AppContent = () => {
                       Total Draft Payout
                     </div>
                     <div className="text-2xl font-bold text-slate-900 mt-1">
-                      ${totalPayout.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
-                      {assetType}
+                      {formatKsh(totalPayout, assetType)}
                     </div>
                   </div>
                   <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl">
@@ -1403,12 +1415,11 @@ const AppContent = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="font-extrabold text-sm text-emerald-600">
-                          $
-                          {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                          })}{" "}
-                          {item.asset?.code}
+                        <div className="text-right">
+                          <div className="font-extrabold text-sm text-emerald-600">
+                            {formatKsh(item.total_amount || "0", item.asset?.code) ||
+                              `${parseFloat(item.total_amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })} ${item.asset?.code}`}
+                          </div>
                         </div>
                         <button
                           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all text-xs"
@@ -1483,12 +1494,11 @@ const AppContent = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="font-extrabold text-sm text-emerald-600">
-                          $
-                          {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                          })}{" "}
-                          {item.asset?.code}
+                        <div className="text-right">
+                          <div className="font-extrabold text-sm text-emerald-600">
+                            {formatKsh(item.total_amount || "0", item.asset?.code) ||
+                              `${parseFloat(item.total_amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })} ${item.asset?.code}`}
+                          </div>
                         </div>
                         <button
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-xs"
@@ -1588,12 +1598,11 @@ const AppContent = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <div className="font-extrabold text-sm text-emerald-600">
-                          $
-                          {parseFloat(item.total_amount || "0").toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                          })}{" "}
-                          {item.asset?.code}
+                        <div className="text-right">
+                          <div className="font-extrabold text-sm text-emerald-600">
+                            {formatKsh(item.total_amount || "0", item.asset?.code) ||
+                              `${parseFloat(item.total_amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })} ${item.asset?.code}`}
+                          </div>
                         </div>
                         <span className="text-xs font-semibold text-slate-500 uppercase">
                           {item.status}

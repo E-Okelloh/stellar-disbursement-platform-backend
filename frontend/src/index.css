@@ -30,7 +30,7 @@
   --color-slate-900: #606161;    /* SAPCONE body text gray (from turkanapeople.org) */
 
   --font-sans: "ABeeZee", system-ui, -apple-system, sans-serif;
-  --font-heading: "Barlow Condensed", var(--font-sans);
+  --font-heading: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
 :root {
@@ -58,6 +58,11 @@
 }
 
 /* HTML and body baseline overrides for high-contrast light mode visibility */
+html {
+  /* Scales every rem-based Tailwind text/spacing utility up app-wide (dashboard +
+     landing page) for readability — many users of this platform are older adults. */
+  font-size: 18px;
+}
 html, body {
   background-color: var(--color-slate-50) !important;
   color: var(--color-slate-900) !important;
