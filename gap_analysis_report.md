@@ -2,7 +2,7 @@
 
 **Program:** GIVE Kenya Stellar Impact Studio  
 **Date:** July 16, 2026  
-**Author:** Lead Systems Architect  
+**Author:** Bethwel Kiplagat
 **Status:** Draft for Review (Phase One Research Boundary)  
 
 ---

@@ -540,13 +540,13 @@ const AppContent = () => {
           <div className="text-right text-xs">
             <span className="text-slate-500 font-medium block">USDC Vault</span>
             <span className="font-bold text-emerald-600 block">
-              ${distBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC
+              {(distBalance * 129).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh
             </span>
           </div>
           <div className="text-right text-xs">
             <span className="text-slate-500 font-medium block">XLM Vault</span>
             <span className="font-bold text-blue-600 block">
-              {xlmBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} XLM
+              {(xlmBalance * 11.5).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ksh
             </span>
           </div>
         </div>
