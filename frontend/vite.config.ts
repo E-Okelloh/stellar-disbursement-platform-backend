@@ -8,8 +8,11 @@ import svgr from "vite-plugin-svgr";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), "REACT_APP_");
+  // Served under /app/ in production (nginx serves the landing page at "/"),
+  // but the dev server itself still runs at the root for local development.
+  const base = command === "build" ? "/app/" : "/";
 
   // Optional HTTPS support using mkcert certificates
   const useHttps = process.env.VITE_USE_HTTPS === "true";
@@ -24,6 +27,7 @@ export default defineConfig(({ mode }) => {
       : undefined;
 
   return {
+    base,
     plugins: [
       tailwindcss(),
       react(),
