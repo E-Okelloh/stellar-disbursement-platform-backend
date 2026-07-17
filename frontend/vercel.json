@@ -3,9 +3,10 @@
   "buildCommand": "yarn build",
   "outputDirectory": "build",
   "framework": null,
-  "rewrites": [
-    { "source": "/app/static/(.*)", "destination": "/app/static/$1" },
-    { "source": "/app/assets/(.*)", "destination": "/app/assets/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/app/static/(.*)", "dest": "/static/$1" },
+    { "src": "/app/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/app/(.*\\.(ico|png|svg|json|txt|csv|js\.map))", "dest": "/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
