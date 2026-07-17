@@ -150,7 +150,7 @@ async function authApi(path: string, body: Record<string, unknown>) {
 
 function passwordStrength(pw: string): { label: string; color: string; width: string } {
   if (pw.length === 0) return { label: "", color: "bg-slate-200", width: "w-0" };
-  const score = [pw.length >= 8, /[A-Z]/.test(pw), /[0-9]/.test(pw), /[^A-Za-z0-9]/.test(pw)].filter(Boolean).length;
+  const score = [pw.length >= 12, /[A-Z]/.test(pw), /[0-9]/.test(pw), /[^A-Za-z0-9]/.test(pw)].filter(Boolean).length;
   if (score <= 1) return { label: "Weak", color: "bg-red-500", width: "w-1/4" };
   if (score === 2) return { label: "Fair", color: "bg-amber-500", width: "w-2/4" };
   if (score === 3) return { label: "Good", color: "bg-blue-500", width: "w-3/4" };
@@ -228,10 +228,11 @@ function ResetPasswordView() {
                 <input
                   type={showPw ? "text" : "password"}
                   required
-                  minLength={8}
+                  minLength={12}
+                  maxLength={36}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 8 characters"
+                  placeholder="12–36 characters"
                   className="w-full bg-white border border-slate-300 text-slate-900 py-2 px-3 pr-10 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 />
                 <button
@@ -265,7 +266,8 @@ function ResetPasswordView() {
               <input
                 type={showPw ? "text" : "password"}
                 required
-                minLength={8}
+                minLength={12}
+                maxLength={36}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 className={`w-full bg-white border text-slate-900 py-2 px-3 rounded-md text-sm focus:outline-none focus:ring-2 ${
