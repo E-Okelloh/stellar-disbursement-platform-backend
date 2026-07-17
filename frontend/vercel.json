@@ -6,7 +6,7 @@
   "routes": [
     { "src": "/app/static/(.*)", "dest": "/static/$1" },
     { "src": "/app/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/app/(.*\\.(ico|png|svg|json|txt|csv|js\.map))", "dest": "/$1" },
+    { "src": "/app/(.+\\.[a-z]+)", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
