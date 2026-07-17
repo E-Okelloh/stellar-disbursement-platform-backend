@@ -17,8 +17,6 @@ services:
         fromDatabase:
           name: sdp-db
           property: connectionString
-      - key: PORT
-        value: "8000"
       - key: ADMIN_PORT
         value: "8003"
       - key: METRICS_PORT
@@ -49,10 +47,14 @@ services:
         sync: false
       - key: SEP10_SIGNING_PRIVATE_KEY
         sync: false
+      - key: DISTRIBUTION_PUBLIC_KEY
+        sync: false
       - key: DISTRIBUTION_SEED
         sync: false
       - key: DISTRIBUTION_ACCOUNT_ENCRYPTION_PASSPHRASE
-        generateValue: true
+        sync: false
+      - key: CHANNEL_ACCOUNT_ENCRYPTION_PASSPHRASE
+        sync: false
       - key: SEP24_JWT_SECRET
         generateValue: true
 
@@ -67,3 +69,5 @@ services:
         value: "24"
       - key: MAX_INVITATION_RESEND_ATTEMPTS
         value: "3"
+      - key: DISABLE_RECAPTCHA
+        value: "true"
