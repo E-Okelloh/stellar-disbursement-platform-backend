@@ -4,6 +4,8 @@
   "outputDirectory": "build",
   "framework": null,
   "rewrites": [
+    { "source": "/app/static/(.*)", "destination": "/app/static/$1" },
+    { "source": "/app/assets/(.*)", "destination": "/app/assets/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
