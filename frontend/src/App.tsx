@@ -209,6 +209,161 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+function passwordStrength(pw: string): { label: string; color: string; width: string } {
+  if (pw.length === 0) return { label: "", color: "bg-slate-200", width: "w-0" };
+  const score = [pw.length >= 8, /[A-Z]/.test(pw), /[0-9]/.test(pw), /[^A-Za-z0-9]/.test(pw)].filter(Boolean).length;
+  if (score <= 1) return { label: "Weak", color: "bg-red-500", width: "w-1/4" };
+  if (score === 2) return { label: "Fair", color: "bg-amber-500", width: "w-2/4" };
+  if (score === 3) return { label: "Good", color: "bg-blue-500", width: "w-3/4" };
+  return { label: "Strong", color: "bg-emerald-500", width: "w-full" };
+}
+
+function ResetPasswordView() {
+  const token = new URLSearchParams(window.location.search).get("token") || "";
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+
+  const strength = passwordStrength(password);
+  const mismatch = confirm.length > 0 && password !== confirm;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirm) { setError("Passwords do not match."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_URL}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, reset_token: token }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatApiError(body, res.statusText));
+      setDone(true);
+    } catch (err: any) {
+      setError(err.message || "Failed to reset password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl p-8 shadow-xs text-center">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <p className="text-sm font-semibold text-slate-800 mb-1">Invalid reset link</p>
+          <p className="text-xs text-slate-500 mb-5">This link is missing a reset token. Please request a new password reset.</p>
+          <a href="/" className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">← Back to sign in</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex items-center justify-center p-4">
+      <div className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl p-8 shadow-xs">
+        <h1 className="text-xl font-bold tracking-wider text-slate-900 mb-1">SAPCONE</h1>
+        <p className="text-sm text-slate-500 mb-6">Set a new password for your account</p>
+
+        {done ? (
+          <div className="text-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <p className="text-sm font-semibold text-slate-800 mb-1">Password updated</p>
+            <p className="text-xs text-slate-500 mb-5">Your password has been changed. You can now sign in with your new credentials.</p>
+            <a
+              href="/"
+              className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all text-sm"
+            >
+              Sign in
+            </a>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1">New password</label>
+              <div className="relative">
+                <input
+                  type={showPw ? "text" : "password"}
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="w-full bg-white border border-slate-300 text-slate-900 py-2 px-3 pr-10 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                >
+                  {showPw ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  )}
+                </button>
+              </div>
+              {password.length > 0 && (
+                <div className="mt-1.5">
+                  <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-300 ${strength.color} ${strength.width}`} />
+                  </div>
+                  <p className={`text-[10px] mt-0.5 font-semibold ${
+                    strength.label === "Weak" ? "text-red-500" :
+                    strength.label === "Fair" ? "text-amber-500" :
+                    strength.label === "Good" ? "text-blue-500" : "text-emerald-600"
+                  }`}>{strength.label}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1">Confirm password</label>
+              <input
+                type={showPw ? "text" : "password"}
+                required
+                minLength={8}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className={`w-full bg-white border text-slate-900 py-2 px-3 rounded-md text-sm focus:outline-none focus:ring-2 ${
+                  mismatch
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-blue-500/20"
+                }`}
+              />
+              {mismatch && <p className="text-[10px] text-red-500 mt-0.5 font-medium">Passwords do not match</p>}
+            </div>
+
+            {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading || mismatch}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-sm"
+            >
+              {loading ? "Saving…" : "Set new password"}
+            </button>
+
+            <div className="text-center">
+              <a href="/" className="text-xs text-slate-500 hover:text-slate-700 transition-colors">← Back to sign in</a>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ExpandChevron({ expanded }: { expanded: boolean }) {
   return (
     <svg
@@ -861,6 +1016,10 @@ const AppContent = () => {
     if (canSubmit) fetchSubmissionsQueue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, currentUser]);
+
+  if (window.location.pathname === "/reset-password") {
+    return <ResetPasswordView />;
+  }
 
   if (!isAuthenticated && showLanding) {
     return <LandingPage onLogin={() => setShowLanding(false)} />;
