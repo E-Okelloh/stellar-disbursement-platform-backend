@@ -1,6 +1,7 @@
 console.log("[DisbursementStudio] src/App.tsx execution started");
 
 import React, { useState, useEffect } from "react";
+import { LandingPage } from "./LandingPage";
 
 // TypeScript definitions matching SAPCONE DisburseFlow schema
 interface Recipient {
@@ -348,6 +349,7 @@ const AppContent = () => {
 
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(!!getAuthToken());
+  const [showLanding, setShowLanding] = useState(!getAuthToken());
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [mfaRequired, setMfaRequired] = useState(false);
@@ -929,6 +931,10 @@ const AppContent = () => {
 
   if (window.location.pathname === "/reset-password") {
     return <ResetPasswordView />;
+  }
+
+  if (!isAuthenticated && showLanding) {
+    return <LandingPage onLogin={() => setShowLanding(false)} />;
   }
 
   if (!isAuthenticated) {
