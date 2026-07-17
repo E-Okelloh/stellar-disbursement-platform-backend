@@ -3,17 +3,7 @@
   "buildCommand": "yarn build",
   "outputDirectory": "build",
   "framework": null,
-  "trailingSlash": false,
-  "headers": [
-    {
-      "source": "/static/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-    }
-  ],
   "rewrites": [
-    { "source": "/app/static/:file", "destination": "/static/:file" },
-    { "source": "/app/assets/:file", "destination": "/assets/:file" },
-    { "source": "/reset-password", "destination": "/index.html" },
-    { "source": "/app", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -12,7 +12,8 @@ export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), "REACT_APP_");
   // Served under /app/ in production (nginx serves the landing page at "/"),
   // but the dev server itself still runs at the root for local development.
-  const base = command === "build" ? "/app/" : "/";
+  // Set VITE_BASE_PATH="/" for Vercel deployments.
+  const base = process.env.VITE_BASE_PATH || (command === "build" ? "/app/" : "/");
 
   // Optional HTTPS support using mkcert certificates
   const useHttps = process.env.VITE_USE_HTTPS === "true";
