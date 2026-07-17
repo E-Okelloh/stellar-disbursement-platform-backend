@@ -8,6 +8,8 @@ ARG GIT_COMMIT
 
 ENV CGO_ENABLED=0 GOOS=linux
 WORKDIR /src/stellar-disbursement-platform
+ENTRYPOINT ["/app/stellar-disbursement-platform"]
+CMD ["serve"]
 ADD go.mod go.sum ./
 RUN go mod download
 COPY . ./
@@ -22,3 +24,4 @@ COPY --from=build /bin/stellar-disbursement-platform /app/
 EXPOSE 8001
 WORKDIR /app
 ENTRYPOINT ["./stellar-disbursement-platform"]
+CMD ["serve"]

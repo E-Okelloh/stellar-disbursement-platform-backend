@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(render workspaces *)",
+      "Bash(render workspace *)",
+      "Bash(render blueprints *)"
+    ]
+  }
+}
