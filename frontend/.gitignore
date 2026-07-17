@@ -44,3 +44,4 @@ process.env
 
 # reference PDF files
 *.pdf
+.vercel

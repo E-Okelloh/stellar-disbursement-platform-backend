@@ -10,13 +10,12 @@ interface Recipient {
   id: string; // id - SAPCONE's own identifier for participant
   amount: string; // payments.amount - Value to be paid
   verification: string; // verification - Date of birth (DOB) checked during SEP-24
-  paymentID: string; // paymentID - SAPCONE-side reference for reconciliation
+  recipientName: string; // RecipientName - optional, passed through to the backend as-is
   errors: {
     phone?: string;
     id?: string;
     amount?: string;
     verification?: string;
-    paymentID?: string;
   };
 }
 
@@ -276,6 +275,9 @@ const AppContent = () => {
   const [authError, setAuthError] = useState("");
   const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
 
   useEffect(() => {
     fetchApi("/app-config")
@@ -505,20 +507,11 @@ const AppContent = () => {
       }
     }
 
-    // Validate Payment ID — optional on the real backend (only length/uniqueness
-    // checked when present, see disbursement_instructions_validator.go).
-    if (row.paymentID && row.paymentID.trim() !== "") {
-      const duplicate = allRows.filter((r) => r.paymentID === row.paymentID).length > 1;
-      if (duplicate) {
-        errors.paymentID = "Duplicate paymentID found";
-      }
-    }
-
     return errors;
   };
 
   // Sync draft to Go Backend API
-  // Parses the phone,id,amount,verification,paymentID CSV client-side for immediate
+  // Parses the phone,id,amount,verification,RecipientName CSV client-side for immediate
   // display — the real backend's disbursement-creation response doesn't echo rows back.
   const parseCsvFile = (file: File): Promise<Record<string, string>[]> => {
     return new Promise((resolve, reject) => {
@@ -561,7 +554,7 @@ const AppContent = () => {
           id: row.id || "",
           amount: row.amount || "",
           verification: row.verification || "",
-          paymentID: row.paymentID || "",
+          recipientName: row.RecipientName || "",
           errors: {},
         } as Recipient;
         rec.errors = validateRecipientRow(rec, rows as Partial<Recipient>[]);
@@ -627,7 +620,7 @@ const AppContent = () => {
       id: `EXT-${Date.now().toString().slice(-4)}`,
       amount: "100",
       verification: "1990-01-01",
-      paymentID: `PAY_${Date.now().toString().slice(-4)}`,
+      recipientName: "",
       errors: {
         phone: "Phone number required",
         verification: "Verification DOB required",
@@ -648,7 +641,7 @@ const AppContent = () => {
 
   const downloadTemplate = () => {
     const csvContent =
-      "phone,id,amount,verification,paymentID\n+16042424000,4ba1,520,1987-12-01,PAY_01\n+16034568000,3ce2,600,1967-06-04,PAY_02\n";
+      "phone,id,amount,verification,RecipientName\n+16042424000,4ba1,520,1987-12-01,Jane Doe\n+16034568000,3ce2,600,1967-06-04,John Smith\n";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -881,42 +874,101 @@ const AppContent = () => {
           <p className="text-lg text-slate-500 mb-8">Sign in to DisburseFlow Studio</p>
 
           {!mfaRequired ? (
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div>
-                <label className="text-base font-semibold text-slate-700 block mb-2">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full bg-white border border-slate-300 text-slate-900 py-3.5 px-4 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-              <div>
-                <label className="text-base font-semibold text-slate-700 block mb-2">Password</label>
-                <input
-                  type="password"
-                  required
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full bg-white border border-slate-300 text-slate-900 py-3.5 px-4 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-              {recaptchaEnabled && (
-                <p className="text-sm text-amber-600">
-                  This backend has reCAPTCHA enabled; login may be rejected until the widget is
-                  wired up.
-                </p>
+            <>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div>
+                  <label className="text-base font-semibold text-slate-700 block mb-2">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    className="w-full bg-white border border-slate-300 text-slate-900 py-3.5 px-4 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-base font-semibold text-slate-700 block mb-2">Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full bg-white border border-slate-300 text-slate-900 py-3.5 px-4 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                {recaptchaEnabled && (
+                  <p className="text-sm text-amber-600">
+                    This backend has reCAPTCHA enabled; login may be rejected until the widget is
+                    wired up.
+                  </p>
+                )}
+                {authError && <p className="text-sm text-red-600 font-medium">{authError}</p>}
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-lg"
+                >
+                  {authLoading ? "Signing in..." : "Sign in"}
+                </button>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgotPassword(true); setForgotSubmitted(false); setForgotEmail(loginEmail); }}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              </form>
+
+              {showForgotPassword && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl">
+                    <h2 className="text-lg font-bold text-slate-900 mb-1">Reset your password</h2>
+                    {!forgotSubmitted ? (
+                      <>
+                        <p className="text-sm text-slate-500 mb-5">Enter your email and we'll send you a reset link.</p>
+                        <form onSubmit={(e) => { e.preventDefault(); setForgotSubmitted(true); }} className="space-y-4">
+                          <input
+                            type="email"
+                            required
+                            placeholder="Your email address"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            className="w-full bg-white border border-slate-300 text-slate-900 py-3 px-4 rounded-lg text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                          />
+                          <button
+                            type="submit"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all text-base"
+                          >
+                            Send reset link
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotPassword(false)}
+                            className="w-full text-sm text-slate-500 hover:text-slate-700 py-1 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </form>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-500 mb-5">
+                          If <span className="font-semibold text-slate-700">{forgotEmail}</span> is registered, a reset link has been sent. Check your inbox.
+                        </p>
+                        <button
+                          onClick={() => setShowForgotPassword(false)}
+                          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-3 px-4 rounded-lg transition-all text-base"
+                        >
+                          Back to sign in
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
-              {authError && <p className="text-sm text-red-600 font-medium">{authError}</p>}
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-lg shadow-sm transition-all disabled:opacity-50 text-lg"
-              >
-                {authLoading ? "Signing in..." : "Sign in"}
-              </button>
-            </form>
+            </>
           ) : (
             <form onSubmit={handleMfaSubmit} className="space-y-6">
               <div>
@@ -1196,13 +1248,13 @@ const AppContent = () => {
                       : "Click to select and upload a beneficiary CSV"}
                 </div>
                 <div className="text-xs text-slate-400">
-                  Required Schema: phone, id, amount, verification, paymentID
+                  Required Schema: phone, id, amount, verification. Optional: RecipientName
                 </div>
                 </div>
               </div>
             ) : (
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
                   <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl">
                     <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
                       Loaded Records
@@ -1219,12 +1271,6 @@ const AppContent = () => {
                       {formatKsh(totalPayout, assetType)}
                     </div>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl">
-                    <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                      Asset
-                    </div>
-                    <div className="text-2xl font-bold text-slate-900 mt-1">{assetType}</div>
-                  </div>
                 </div>
 
                 <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm mt-6">
@@ -1232,7 +1278,7 @@ const AppContent = () => {
                     <thead>
                       <tr>
                         <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
-                          paymentID
+                          Name
                         </th>
                         <th className="bg-slate-50 text-slate-600 font-semibold py-3 px-4 border-b border-slate-200 text-xs uppercase tracking-wider">
                           phone (receivers.phone)
@@ -1260,15 +1306,11 @@ const AppContent = () => {
                           <td className="py-3.5 px-4 border-b border-slate-200 align-middle">
                             <input
                               type="text"
-                              value={rec.paymentID}
-                              className={`w-full bg-white border text-slate-900 py-1.5 px-3 rounded-md text-sm focus:outline-none focus:ring-2 ${rec.errors.paymentID ? "border-red-500 focus:ring-red-500/20" : "border-slate-300 focus:border-blue-500 focus:ring-blue-500/20"}`}
-                              onChange={(e) => handleCellChange(index, "paymentID", e.target.value)}
+                              value={rec.recipientName}
+                              placeholder="—"
+                              className="w-full bg-white border border-slate-300 text-slate-900 py-1.5 px-3 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                              onChange={(e) => handleCellChange(index, "recipientName", e.target.value)}
                             />
-                            {rec.errors.paymentID && (
-                              <span className="text-xs text-red-600 mt-1 block font-medium">
-                                {rec.errors.paymentID}
-                              </span>
-                            )}
                           </td>
                           <td className="py-3.5 px-4 border-b border-slate-200 align-middle">
                             <input
