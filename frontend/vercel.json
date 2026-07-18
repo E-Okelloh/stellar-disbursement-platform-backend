@@ -1,0 +1,10 @@
+{
+  "installCommand": "yarn install",
+  "buildCommand": "yarn build",
+  "outputDirectory": "build",
+  "framework": null,
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
