@@ -47,7 +47,8 @@ func DisbursementStateMachineWithInitialState(initialState DisbursementStatus) *
 		{From: ReadyDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},       // user re-uploads instructions
 		{From: ReadyDisbursementStatus.State(), To: ApprovedDisbursementStatus.State()},    // approver approves disbursement
 		{From: ReadyDisbursementStatus.State(), To: StartedDisbursementStatus.State()},     // start disbursement (when approval not required)
-		{From: ApprovedDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},    // approver rejects, back to ready
+		{From: ReadyDisbursementStatus.State(), To: DraftDisbursementStatus.State()},       // approver rejects, back to uploader
+		{From: ApprovedDisbursementStatus.State(), To: ReadyDisbursementStatus.State()},    // finance officer rejects, back to ready for re-approval
 		{From: ApprovedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},  // finance officer submits to Stellar
 		{From: StartedDisbursementStatus.State(), To: PausedDisbursementStatus.State()},    // user pauses disbursement
 		{From: PausedDisbursementStatus.State(), To: StartedDisbursementStatus.State()},    // user resumes disbursement

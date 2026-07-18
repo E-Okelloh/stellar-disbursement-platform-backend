@@ -469,6 +469,16 @@ func handleHTTP(o ServeOptions) *chi.Mux {
 			)).Group(func(r chi.Router) {
 				r.Patch("/{id}/submit", handler.SubmitDisbursement)
 			})
+
+			// Group REJECT operations (accessible to approvers and finance officers — the
+			// service layer itself determines which transition applies based on the
+			// disbursement's current status: READY->DRAFT or APPROVED->READY)
+			r.With(middleware.RequirePermission(
+				data.WriteDisbursements,
+				middleware.AnyRoleMiddleware(authManager, data.OwnerUserRole, data.FinancialControllerUserRole, data.ApproverUserRole, data.FinanceOfficerUserRole),
+			)).Group(func(r chi.Router) {
+				r.Patch("/{id}/reject", handler.RejectDisbursement)
+			})
 		})
 
 		// Payment endpoints

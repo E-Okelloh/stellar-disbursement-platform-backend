@@ -57,6 +57,7 @@ type DisbursementStatusHistoryEntry struct {
 	UserID    string             `json:"user_id"`
 	Status    DisbursementStatus `json:"status"`
 	Timestamp time.Time          `json:"timestamp"`
+	Reason    string             `json:"reason,omitempty"`
 }
 type DisbursementModel struct {
 	dbConnectionPool db.DBConnectionPool
@@ -286,6 +287,16 @@ func (d *DisbursementModel) GetAll(ctx context.Context, sqlExec db.SQLExecuter, 
 
 // UpdateStatus updates the status of the given disbursement.
 func (d *DisbursementModel) UpdateStatus(ctx context.Context, sqlExec db.SQLExecuter, userID string, disbursementID string, targetStatus DisbursementStatus) error {
+	return d.updateStatus(ctx, sqlExec, userID, disbursementID, targetStatus, "")
+}
+
+// UpdateStatusWithReason updates the status of the given disbursement, recording a reason
+// in its status history (e.g. why an Approver/FinanceOfficer rejected it).
+func (d *DisbursementModel) UpdateStatusWithReason(ctx context.Context, sqlExec db.SQLExecuter, userID string, disbursementID string, targetStatus DisbursementStatus, reason string) error {
+	return d.updateStatus(ctx, sqlExec, userID, disbursementID, targetStatus, reason)
+}
+
+func (d *DisbursementModel) updateStatus(ctx context.Context, sqlExec db.SQLExecuter, userID string, disbursementID string, targetStatus DisbursementStatus, reason string) error {
 	sourceStatuses := targetStatus.SourceStatuses()
 
 	query := `
@@ -293,11 +304,11 @@ func (d *DisbursementModel) UpdateStatus(ctx context.Context, sqlExec db.SQLExec
 			disbursements
 		SET
 			status = $1,
-			status_history = array_append(status_history, create_disbursement_status_history(NOW(), $1, $2))
+			status_history = array_append(status_history, create_disbursement_status_history(NOW(), $1, $2, $5))
 		WHERE
 			id = $3 AND status = ANY($4)
 		`
-	result, err := sqlExec.ExecContext(ctx, query, targetStatus, userID, disbursementID, pq.Array(sourceStatuses))
+	result, err := sqlExec.ExecContext(ctx, query, targetStatus, userID, disbursementID, pq.Array(sourceStatuses), utils.SQLNullString(reason))
 	if err != nil {
 		return fmt.Errorf("error updating disbursement status: %w", err)
 	}

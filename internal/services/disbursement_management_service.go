@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/shopspring/decimal"
 	"github.com/stellar/go-stellar-sdk/support/log"
@@ -39,12 +40,14 @@ type DisbursementWithUserMetadata struct {
 }
 
 var (
-	ErrDisbursementNotFound          = errors.New("disbursement not found")
-	ErrDisbursementNotReadyToStart   = errors.New("disbursement is not ready to be started")
-	ErrDisbursementNotReadyToPause   = errors.New("disbursement is not ready to be paused")
-	ErrDisbursementNotReadyToApprove = errors.New("disbursement is not ready to be approved")
-	ErrDisbursementNotReadyToSubmit  = errors.New("disbursement is not ready to be submitted")
-	ErrDisbursementWalletDisabled    = errors.New("disbursement wallet is disabled")
+	ErrDisbursementNotFound                = errors.New("disbursement not found")
+	ErrDisbursementNotReadyToStart         = errors.New("disbursement is not ready to be started")
+	ErrDisbursementNotReadyToPause         = errors.New("disbursement is not ready to be paused")
+	ErrDisbursementNotReadyToApprove       = errors.New("disbursement is not ready to be approved")
+	ErrDisbursementNotReadyToSubmit        = errors.New("disbursement is not ready to be submitted")
+	ErrDisbursementNotReadyToReject        = errors.New("disbursement is not in a state that can be rejected")
+	ErrDisbursementWalletDisabled          = errors.New("disbursement wallet is disabled")
+	ErrDisbursementRejectionReasonRequired = errors.New("a reason is required to reject a disbursement")
 
 	ErrDisbursementStatusCantBeChanged  = errors.New("disbursement status can't be changed to the requested status")
 	ErrDisbursementStartedByCreator     = errors.New("disbursement can't be started by its creator")
@@ -426,6 +429,46 @@ func (s *DisbursementManagementService) ApproveDisbursement(ctx context.Context,
 		// 3. Update disbursement status to `approved`
 		if err = s.Models.Disbursements.UpdateStatus(ctx, dbTx, user.ID, disbursementID, data.ApprovedDisbursementStatus); err != nil {
 			return fmt.Errorf("error updating disbursement status to approved for disbursement with id %s: %w", disbursementID, err)
+		}
+
+		return nil
+	})
+}
+
+// RejectDisbursement rejects a disbursement with a mandatory reason, bouncing it back one
+// step in the workflow: an Approver rejects a READY disbursement back to DRAFT (the
+// Uploader must fix and re-upload), while a FinanceOfficer rejects an APPROVED disbursement
+// back to READY (for the Approver to reconsider).
+func (s *DisbursementManagementService) RejectDisbursement(ctx context.Context, disbursementID string, user *auth.User, reason string) error {
+	if strings.TrimSpace(reason) == "" {
+		return ErrDisbursementRejectionReasonRequired
+	}
+
+	return db.RunInTransaction(ctx, s.Models.DBConnectionPool, nil, func(dbTx db.DBTransaction) error {
+		disbursement, err := s.Models.Disbursements.Get(ctx, dbTx, disbursementID)
+		if err != nil {
+			if errors.Is(err, data.ErrRecordNotFound) {
+				return ErrDisbursementNotFound
+			}
+			return fmt.Errorf("error getting disbursement with id %s: %w", disbursementID, err)
+		}
+
+		var targetStatus data.DisbursementStatus
+		switch disbursement.Status {
+		case data.ReadyDisbursementStatus:
+			targetStatus = data.DraftDisbursementStatus
+		case data.ApprovedDisbursementStatus:
+			targetStatus = data.ReadyDisbursementStatus
+		default:
+			return ErrDisbursementNotReadyToReject
+		}
+
+		if err = disbursement.Status.TransitionTo(targetStatus); err != nil {
+			return ErrDisbursementNotReadyToReject
+		}
+
+		if err = s.Models.Disbursements.UpdateStatusWithReason(ctx, dbTx, user.ID, disbursementID, targetStatus, reason); err != nil {
+			return fmt.Errorf("error updating disbursement status to %s for disbursement with id %s: %w", targetStatus, disbursementID, err)
 		}
 
 		return nil

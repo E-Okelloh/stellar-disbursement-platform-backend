@@ -162,7 +162,7 @@ func Test_DisbursementStatus_SourceStatuses(t *testing.T) {
 		{
 			name:                   "Draft",
 			targetStatus:           DraftDisbursementStatus,
-			expectedSourceStatuses: []DisbursementStatus{},
+			expectedSourceStatuses: []DisbursementStatus{ReadyDisbursementStatus},
 		},
 		{
 			name:                   "Ready",

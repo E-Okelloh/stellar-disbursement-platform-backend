@@ -619,6 +619,49 @@ func (d DisbursementHandler) ApproveDisbursement(w http.ResponseWriter, r *http.
 	httpjson.RenderStatus(w, http.StatusOK, response, httpjson.JSON)
 }
 
+type RejectDisbursementRequest struct {
+	Reason string `json:"reason"`
+}
+
+// RejectDisbursement rejects a disbursement with a mandatory reason, bouncing it back one
+// step: READY->DRAFT (Approver) or APPROVED->READY (FinanceOfficer).
+func (d DisbursementHandler) RejectDisbursement(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	disbursementID := chi.URLParam(r, "id")
+
+	var req RejectDisbursementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperror.BadRequest("invalid request body", err, nil).Render(w)
+		return
+	}
+
+	user, err := ctxHelper.GetUserFromContext(ctx, d.AuthManager)
+	if err != nil {
+		httperror.InternalError(ctx, "Cannot get user from context", err, nil).Render(w)
+		return
+	}
+
+	err = d.DisbursementManagementService.RejectDisbursement(ctx, disbursementID, user, req.Reason)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrDisbursementNotFound):
+			httperror.NotFound(services.ErrDisbursementNotFound.Error(), err, nil).Render(w)
+		case errors.Is(err, services.ErrDisbursementNotReadyToReject):
+			httperror.BadRequest(services.ErrDisbursementNotReadyToReject.Error(), err, nil).Render(w)
+		case errors.Is(err, services.ErrDisbursementRejectionReasonRequired):
+			httperror.BadRequest(services.ErrDisbursementRejectionReasonRequired.Error(), err, nil).Render(w)
+		default:
+			msg := fmt.Sprintf("Cannot reject disbursementID=%s: %v", disbursementID, err)
+			httperror.InternalError(ctx, msg, err, nil).Render(w)
+		}
+		return
+	}
+
+	response := map[string]string{"message": "Disbursement rejected"}
+	httpjson.RenderStatus(w, http.StatusOK, response, httpjson.JSON)
+}
+
 // SubmitDisbursement submits an approved disbursement to Stellar (transition to STARTED)
 func (d DisbursementHandler) SubmitDisbursement(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
